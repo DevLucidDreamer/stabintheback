@@ -276,25 +276,6 @@ public static class Stage2Builder
         matAccent = GetMat("Accent", new Color(0.8f, 0.3f, 0.2f));
     }
 
-    private static Material GetMat(string name, Color color)
-    {
-        const string dir = "Assets/Materials";
-        if (!AssetDatabase.IsValidFolder(dir))
-            AssetDatabase.CreateFolder("Assets", "Materials");
-
-        string path = $"{dir}/Camp_{name}.mat";
-        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (mat == null)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null) shader = Shader.Find("Standard");
-            mat = new Material(shader);
-            AssetDatabase.CreateAsset(mat, path);
-        }
-        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
-        else mat.color = color;
-        EditorUtility.SetDirty(mat);
-        return mat;
-    }
+    private static Material GetMat(string name, Color color) => BuilderMaterials.Ensure("Camp_" + name, color);
 }
 #endif
