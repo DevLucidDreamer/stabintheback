@@ -8,6 +8,12 @@ using UnityEngine;
 /// </summary>
 public class Weapon : Interactable
 {
+    /// <summary>
+    /// 무기가 손에 들리거나(true) 월드에 내려놓아질 때(false) 호출.
+    /// 소지 상태는 이미 모든 클라이언트에 동기화된 뒤 반영되므로, 연출용으로 구독하면 된다.
+    /// </summary>
+    public static event System.Action<Weapon, bool> OnHeldChanged;
+
     [Header("손에 들었을 때의 로컬 포즈")]
     [Tooltip("들었을 때 손 소켓 기준 위치 오프셋")]
     public Vector3 holdPosition = Vector3.zero;
@@ -42,6 +48,8 @@ public class Weapon : Interactable
         transform.SetParent(socket, false);
         transform.localPosition = holdPosition;
         transform.localEulerAngles = holdEuler;
+
+        OnHeldChanged?.Invoke(this, true);
     }
 
     /// <summary>
@@ -67,5 +75,7 @@ public class Weapon : Interactable
 
         if (addPhysics && GetComponent<Rigidbody>() == null)
             gameObject.AddComponent<Rigidbody>().mass = 2f;
+
+        OnHeldChanged?.Invoke(this, false);
     }
 }

@@ -136,6 +136,9 @@ public class ItemChecklist : MonoBehaviour
     private string BuildLocalText()
     {
         var sb = new StringBuilder("< 캠핑 준비물 >\n\n");
+        if (order.Count == 0)
+            return sb.Append("여기선 챙길 게 없다.\n출발하면 시작된다.").ToString(); // 대기실 등
+
         bool all = order.Count > 0;
         foreach (string itemName in order)
         {
@@ -212,12 +215,7 @@ public class ItemChecklist : MonoBehaviour
         var mr = go.GetComponent<MeshRenderer>();
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
-        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-        if (shader == null) shader = Shader.Find("Standard");
-        var mat = new Material(shader);
-        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
-        else mat.color = color;
-        mr.material = mat;
+        mr.material = PipelineShaders.CreateLit(color);
     }
 
     private void OnGUI()

@@ -618,25 +618,6 @@ public static class HouseBuilder
         matOrange = GetMat("Orange", new Color(0.9f, 0.45f, 0.1f));
     }
 
-    static Material GetMat(string name, Color color)
-    {
-        const string dir = "Assets/Materials";
-        if (!AssetDatabase.IsValidFolder(dir))
-            AssetDatabase.CreateFolder("Assets", "Materials");
-
-        string path = $"{dir}/House_{name}.mat";
-        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (mat == null)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null) shader = Shader.Find("Standard");
-            mat = new Material(shader);
-            AssetDatabase.CreateAsset(mat, path);
-        }
-        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
-        else mat.color = color;
-        EditorUtility.SetDirty(mat);
-        return mat;
-    }
+    static Material GetMat(string name, Color color) => BuilderMaterials.Ensure("House_" + name, color);
 }
 #endif
