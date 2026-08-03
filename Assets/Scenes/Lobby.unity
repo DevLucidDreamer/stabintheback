@@ -11000,8 +11000,11 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  firstStageScene: NetworkDemo
+  firstStageScene: Stage2_Campground
   countdownSeconds: 5
+  minPlayers: 1
+  maxPlayers: 8
+  optionsKey: 3
   recountInterval: 0.5
 --- !u!114 &1100333133
 MonoBehaviour:

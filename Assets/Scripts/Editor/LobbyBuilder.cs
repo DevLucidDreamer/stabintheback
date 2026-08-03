@@ -27,10 +27,15 @@ public static class LobbyBuilder
     private const string PlayerPrefabPath = "Assets/Prefabs/NetworkPlayer.prefab";
 
     private const string LobbySceneName = "Lobby";
-    private const string FirstStageScene = "NetworkDemo";
 
-    /// <summary>방 정원(호스트 포함). 스폰 지점 수와 맞춰 둔다.</summary>
-    private const int MaxPlayers = 5;
+    /// <summary>대기실에서 인원이 다 모이면 출발할 게임 씬.</summary>
+    private const string FirstStageScene = "Stage2_Campground";
+
+    /// <summary>방 정원의 기본값. 호스트가 대기실에서 Tab을 눌러 바꿀 수 있다.</summary>
+    private const int DefaultTargetPlayers = 4;
+
+    /// <summary>정원의 상한. NetworkManager의 접속 상한 초기값으로도 쓴다.</summary>
+    private const int MaxPlayers = 8;
 
     // 주요 좌표 (바닥 윗면 y = 0)
     private static readonly Vector3 AltarPos = Vector3.zero;
@@ -331,17 +336,17 @@ public static class LobbyBuilder
     private static void SpawnPoints()
     {
         var root = new GameObject("NetworkSpawnPoints").transform;
-        Vector3[] offsets =
-        {
-            new Vector3(-3.2f, 0f, 0f), new Vector3(-1.6f, 0f, -1.2f), new Vector3(0f, 0f, 0f),
-            new Vector3(1.6f, 0f, -1.2f), new Vector3(3.2f, 0f, 0f),
-        };
 
-        for (int i = 0; i < offsets.Length; i++)
+        // 정원 상한만큼 두 줄로 늘어세운다. RoundRobin이라 자리는 순서대로 배정된다.
+        for (int i = 0; i < MaxPlayers; i++)
         {
+            int row = i / 4;
+            int col = i % 4;
+            var offset = new Vector3((col - 1.5f) * 2.1f, 0f, row * -1.8f);
+
             var sp = new GameObject("Spawn_" + (char)('A' + i));
             sp.transform.SetParent(root, false);
-            sp.transform.position = SpawnBase + offsets[i];
+            sp.transform.position = SpawnBase + offset;
             sp.transform.rotation = Quaternion.identity; // +Z = 제단 방향
             sp.AddComponent<NetworkStartPosition>();
         }
@@ -380,7 +385,8 @@ public static class LobbyBuilder
         manager.playerPrefab = playerPrefab;
         manager.autoCreatePlayer = true;
         manager.playerSpawnMethod = PlayerSpawnMethod.RoundRobin;
-        manager.maxConnections = MaxPlayers; // 대기실의 "Member n/5" 표시가 이 값을 쓴다
+        // 실제 정원은 호스트가 대기실 옵션에서 정하고 LobbyManager가 이 값을 덮어쓴다.
+        manager.maxConnections = MaxPlayers;
         EditorUtility.SetDirty(manager);
     }
 
@@ -392,8 +398,12 @@ public static class LobbyBuilder
 
         var so = new SerializedObject(lobby);
         so.FindProperty("firstStageScene").stringValue = FirstStageScene;
+        so.FindProperty("minPlayers").intValue = 1;
+        so.FindProperty("maxPlayers").intValue = MaxPlayers;
         so.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(lobby);
+
+        Debug.Log($"[Lobby] 기본 정원 {DefaultTargetPlayers}명. 호스트가 대기실에서 Tab으로 2~{MaxPlayers}명 사이에서 바꿀 수 있습니다.");
     }
 
     // ---------------------------------------------------------------- 씬 흐름 배선

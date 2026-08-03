@@ -17,9 +17,9 @@ public class WeaponNetworkManager : NetworkBehaviour
     public static WeaponNetworkManager Instance { get; private set; }
 
     [Header("마검 스윙 살상 판정")]
-    [Tooltip("스윙이 닿는 앞쪽 거리 (m)")]
+    [Tooltip("무기에 값이 없을 때 쓰는 기본 사거리 (m). 보통은 무기별 swingReach가 우선한다")]
     [SerializeField] private float lethalReach = 1.4f;
-    [Tooltip("살상 판정 반경 (m)")]
+    [Tooltip("무기에 값이 없을 때 쓰는 기본 판정 반경 (m)")]
     [SerializeField] private float lethalRadius = 1.0f;
     [Tooltip("클릭 후 실제 타격까지 지연(내려치기 타이밍과 맞춤, 초)")]
     [SerializeField] private float strikeDelay = 0.18f;
@@ -162,20 +162,32 @@ public class WeaponNetworkManager : NetworkBehaviour
     [Server]
     private void ServerSwingKill(uint attackerNetId)
     {
-        if (HeldWeaponOf(attackerNetId) < 0)
+        int weaponId = HeldWeaponOf(attackerNetId);
+        if (weaponId < 0)
             return; // 그 사이 마검을 놓쳤으면 살상 없음
         if (!NetworkServer.spawned.TryGetValue(attackerNetId, out var attacker) || attacker == null)
             return;
 
-        Transform t = attacker.transform;
-        Vector3 origin = t.position + Vector3.up * 1.0f + t.forward * lethalReach;
+        // 무기마다 사거리/판정 크기가 다르다 (대검은 멀리, 고무 오리는 코앞).
+        Weapon weapon = Resolve(weaponId);
+        float reach = weapon != null ? weapon.swingReach : lethalReach;
+        float radius = weapon != null ? weapon.swingRadius : lethalRadius;
 
-        foreach (Collider col in Physics.OverlapSphere(origin, lethalRadius))
+        Transform t = attacker.transform;
+        Vector3 origin = t.position + Vector3.up * 1.0f + t.forward * reach;
+
+        foreach (Collider col in Physics.OverlapSphere(origin, radius))
         {
             PlayerHealth victim = col.GetComponentInParent<PlayerHealth>();
             if (victim == null || victim.netId == attackerNetId)
                 continue;
-            victim.ServerKill(attackerNetId);
+
+            // 맞은 방향으로 시체가 날아가도록 타격 방향을 함께 넘긴다.
+            Vector3 blow = victim.transform.position - t.position;
+            blow.y = 0f;
+            if (blow.sqrMagnitude < 0.0001f)
+                blow = t.forward;
+            victim.ServerKill(attackerNetId, blow.normalized);
         }
     }
 
