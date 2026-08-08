@@ -8,7 +8,7 @@ using UnityEngine;
 
 /// <summary>
 /// 대기실(로비) 씬을 생성하는 에디터 도구.
-/// 숲 들판 + 중앙 참치 제단(나무 식탁 위 냉동참치 = 마검) + 허수아비 연습장
+/// 숲 들판 + 중앙 식탁(무기로 쓸 수 있는 냉동참치) + 허수아비 연습장
 /// + 출발 게이트/발판 + 스폰포인트 + 네트워크 매니저까지 한 번에 구성한다.
 /// 메뉴: Tools > Lobby > Build Lobby
 ///
@@ -143,13 +143,13 @@ public static class LobbyBuilder
         Prim(g, "Leaves", PrimitiveType.Sphere, new Vector3(0f, 3.6f, 0f), new Vector3(3f, 2.8f, 3f), matLeaf);
     }
 
-    // ---------------------------------------------------------------- 참치 제단 (대기실의 얼굴)
+    // ---------------------------------------------------------------- 중앙 식탁 (대기실의 얼굴)
 
     private static void Altar(Transform p)
     {
         Transform g = Group(p, "TunaAltar", AltarPos, 0f);
 
-        // 돌 원판 + 둘러싼 돌기둥 (성검 제단 패러디)
+        // 돌 원판 + 둘러싼 돌기둥
         Disc(g, "Platform", 9f, 0.14f, matStone);
         Disc(g, "PlatformInlay", 6f, 0.16f, matDirt);
         for (int i = 0; i < 8; i++)
@@ -171,10 +171,11 @@ public static class LobbyBuilder
         Box(table, "BenchLegS", new Vector3(0f, 0.19f, 1.05f), new Vector3(2.2f, 0.38f, 0.1f), matWood);
         Box(table, "BenchLegN", new Vector3(0f, 0.19f, -1.05f), new Vector3(2.2f, 0.38f, 0.1f), matWood);
 
-        // 마검 = 냉동참치. 식탁 상판 윗면(y = 0.16 + 0.78 + 0.06 = 1.00) 위에 안치.
+        // 무기 = 냉동참치. 식탁 상판 윗면(y = 0.16 + 0.78 + 0.06 = 1.00) 위에 안치.
         Transform tuna = FrozenTuna(g, new Vector3(0f, 1f, 0f), 90f);
 
-        // 제단 조명 — 참치가 사라지면 꺼진다(LobbyAltar가 제어)
+        // 식탁 조명. 참치를 집어도 그대로 켜 둔다 —
+        // 조명이 꺼지면 누가 가져갔다는 걸 모두가 알아채기 때문이다.
         var lightGo = new GameObject("AltarLight");
         lightGo.transform.SetParent(g, false);
         lightGo.transform.localPosition = new Vector3(0f, 7f, 0f);
@@ -187,14 +188,15 @@ public static class LobbyBuilder
         light.intensity = 8f; // 눈에 띄되 과하지 않게. 밝기는 취향껏 조절
         light.shadows = LightShadows.None;
 
-        // 제단 팻말 (참치를 뽑으면 문구가 바뀐다). 길을 막지 않게 옆으로 비켜 세운다.
-        TextMesh sign = Sign(g, "AltarSign", new Vector3(3.4f, 0f, -4.4f), 205f, "이 냉동참치가 마검이다");
+        // 팻말은 조작 안내만 한다. 참치를 집어도 문구는 바뀌지 않는다(누가 가져갔는지 새면 안 된다).
+        // 길을 막지 않게 옆으로 비켜 세운다.
+        Sign(g, "AltarSign", new Vector3(3.4f, 0f, -4.4f), 205f, "냉동참치\n좌클릭으로 줍기");
 
         var altar = g.gameObject.AddComponent<LobbyAltar>();
-        altar.Configure(tuna.GetComponent<Weapon>(), light, sign);
+        altar.Configure(tuna.GetComponent<Weapon>());
     }
 
-    /// <summary>마검: 냉동참치. (집 냉장고 안의 것과 같은 형태)</summary>
+    /// <summary>무기로 쓸 수 있는 냉동참치. (집 냉장고 안의 것과 같은 형태)</summary>
     private static Transform FrozenTuna(Transform parent, Vector3 localPos, float rotY)
     {
         Transform g = Group(parent, "FrozenTuna", localPos, rotY);
@@ -248,7 +250,7 @@ public static class LobbyBuilder
         Dummy(g, new Vector3(1.2f, 0f, 1.9f), -25f);
         Dummy(g, new Vector3(0f, 0f, -1.6f), 165f);
 
-        Sign(p, "PracticeSign", new Vector3(-6.4f, 0f, -1.6f), 150f, "허수아비\n마검으로 휘둘러 보세요");
+        Sign(p, "PracticeSign", new Vector3(-6.4f, 0f, -1.6f), 150f, "허수아비\n무기를 들고 휘둘러 보세요");
     }
 
     private static void Dummy(Transform p, Vector3 pos, float rotY)
@@ -306,29 +308,16 @@ public static class LobbyBuilder
     /// 나무 팻말 + 글자. rotY가 향하는 쪽(+Z)에서 읽힌다.
     /// 글자 크기는 characterSize로 조절한다 — 한글은 전각이라 한 줄 20자쯤이 판 폭에 맞는다.
     /// </summary>
-    private static TextMesh Sign(Transform parent, string name, Vector3 pos, float rotY, string text)
+    /// <summary>나무 팻말 + TMP 글자. 문구 길이에 맞춰 글자 크기가 자동으로 조절된다.</summary>
+    private static void Sign(Transform parent, string name, Vector3 pos, float rotY, string text)
     {
         Transform g = Group(parent, name, pos, rotY);
         Box(g, "Post", new Vector3(0f, 0.7f, 0f), new Vector3(0.1f, 1.4f, 0.1f), matWood);
         Box(g, "Board", new Vector3(0f, 1.6f, 0f), new Vector3(3.4f, 1f, 0.08f), matWood);
 
-        var textGo = new GameObject("Text");
-        textGo.transform.SetParent(g, false);
-        textGo.transform.localPosition = new Vector3(0f, 1.6f, 0.06f);
-
-        var tm = textGo.AddComponent<TextMesh>();
-        tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        textGo.GetComponent<MeshRenderer>().sharedMaterial = tm.font.material;
-        tm.text = text;
-        tm.anchor = TextAnchor.MiddleCenter;
-        tm.alignment = TextAlignment.Center;
-        tm.characterSize = 0.02f;
-        tm.fontSize = 64;
-        tm.lineSpacing = 1.1f;
-        tm.color = new Color(0.14f, 0.11f, 0.08f);
-        textGo.AddComponent<WorldSign>();
-
-        return tm;
+        // 판보다 살짝 안쪽으로 잡아 글자가 테두리에 닿지 않게 한다.
+        BuilderText.World(g, "Text", new Vector3(0f, 1.6f, 0.055f), text,
+            new Vector2(3.05f, 0.8f), BuilderText.SignInk);
     }
 
     // ---------------------------------------------------------------- 스폰 / 네트워크
@@ -369,6 +358,10 @@ public static class LobbyBuilder
 
         if (bootstrap.GetComponent<NetworkAutoLaunch>() == null)
             bootstrap.AddComponent<NetworkAutoLaunch>();
+
+        // 대기실에 있는 동안 LAN에 방을 알린다 → 타이틀의 '빠른 참가'가 이걸 찾아 들어온다.
+        if (bootstrap.GetComponent<LanRoomAdvertiser>() == null)
+            bootstrap.AddComponent<LanRoomAdvertiser>();
 
         var manager = bootstrap.GetComponent<NetworkManager>();
         if (manager == null)
@@ -512,7 +505,31 @@ public static class LobbyBuilder
         go.transform.localScale = size;
         if (mat != null)
             go.GetComponent<MeshRenderer>().sharedMaterial = mat;
+
+        FixFlatCollider(go, type, size);
         return go;
+    }
+
+    /// <summary>
+    /// 납작하게 눌러 놓은 원기둥·구의 콜라이더를 실제 모양에 맞춘다.
+    /// CapsuleCollider·SphereCollider의 반지름은 X·Z 스케일 중 큰 쪽을 따라가고
+    /// 캡슐 높이는 최소 지름만큼 강제돼서, 얇게 편 원판이 거대한 덩어리가 된다
+    /// (그 위를 걸으면 공중에 뜬 것처럼 보인다). BoxCollider는 스케일을 그대로 따라간다.
+    /// </summary>
+    private static void FixFlatCollider(GameObject go, PrimitiveType type, Vector3 size)
+    {
+        if (type != PrimitiveType.Cylinder && type != PrimitiveType.Sphere && type != PrimitiveType.Capsule)
+            return;
+
+        float widest = Mathf.Max(Mathf.Abs(size.x), Mathf.Abs(size.z));
+        if (Mathf.Abs(size.y) >= widest * 0.5f)
+            return;
+
+        Collider round = go.GetComponent<Collider>();
+        if (round != null)
+            Object.DestroyImmediate(round);
+
+        go.AddComponent<BoxCollider>(); // 메시 경계에 맞춰 자동으로 잡힌다
     }
 
     private static void LoadMaterials()

@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -24,20 +25,59 @@ public static class Stage2Builder
     private const string ConeMeshPath = "Assets/Models/Generated/Camp_Cone.asset";
     private static Mesh coneMesh;
 
+    /// <summary>캠핑 프롭 프리팹을 모아 두는 곳. 씬에는 이 프리팹의 인스턴스만 놓인다.</summary>
+    private const string PropFolder = "Assets/Prefabs/Camp";
+
+    private static readonly Dictionary<string, GameObject> props = new Dictionary<string, GameObject>();
+
     private static Material matGrass, matGrassDark, matGrassLight, matDirt;
     private static Material matWood, matWoodDark, matStone, matMetal, matDark;
     private static Material matTent, matTentDark, matFlame, matEmber;
     private static Material matLeaf, matLeafDark, matLeafLight;
     private static Material matAccent, matWater, matRope;
 
+    /// <summary>
+    /// 프롭 프리팹만 다시 굽는다. 씬은 건드리지 않는다.
+    ///
+    /// 맵을 손으로 배치해 둔 뒤 텐트 모양 같은 걸 고치고 싶을 때 쓴다 —
+    /// 씬에 놓인 것은 전부 프리팹 인스턴스라, 프리팹만 다시 구우면
+    /// 배치를 그대로 둔 채 모양만 갱신된다.
+    /// </summary>
+    [MenuItem("Tools/Stage/Rebuild Camp Props (씬 유지)")]
+    public static void RebuildProps()
+    {
+        LoadMaterials();
+        props.Clear();
+        Random.InitState(2026);
+
+        BakeAllProps();
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"[Stage2] 프롭 프리팹 {props.Count}종을 다시 구웠습니다: {PropFolder}\n" +
+                  "씬에 놓인 인스턴스는 그대로 두고 모양만 갱신됩니다.");
+    }
+
     [MenuItem("Tools/Stage/Build Stage 2 (Campground)")]
     public static void BuildStage2()
     {
+        if (System.IO.File.Exists(ScenePath) &&
+            !EditorUtility.DisplayDialog("캠핑장 다시 만들기",
+                $"{ScenePath} 를 처음부터 새로 만듭니다.\n" +
+                "씬에서 손으로 옮기거나 추가해 둔 것은 전부 사라집니다.\n\n" +
+                "모양만 고치고 배치를 지키고 싶다면 취소하고\n" +
+                "'Tools > Stage > Rebuild Camp Props (씬 유지)'를 쓰세요.",
+                "새로 만들기", "취소"))
+        {
+            return;
+        }
+
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             return;
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         LoadMaterials();
+        props.Clear();
 
         AddSun();
 
@@ -45,26 +85,28 @@ public static class Stage2Builder
         // 실제로는 씬에 구워지지만, 다시 빌드해도 맵이 뒤바뀌지 않게 하려는 목적.
         Random.InitState(2026);
 
+        BakeAllProps();
+
         var root = new GameObject("Campground").transform;
 
         Terrain(root);
         Lake(root, new Vector3(15f, 0f, 13f), 7.5f);
 
-        Campfire(root, new Vector3(0f, 0f, 0f));
-        Tripod(root, new Vector3(0f, 0f, 0f));
-        LogSeats(root, new Vector3(0f, 0f, 0f), 2.4f);
+        Place("Campfire", root, new Vector3(0f, 0f, 0f));
+        Place("Tripod", root, new Vector3(0f, 0f, 0f));
+        Place("LogSeats", root, new Vector3(0f, 0f, 0f));
 
-        Tent(root, new Vector3(-8f, 0f, -3f), 25f, matTent);
-        Tent(root, new Vector3(8f, 0f, -3.5f), -25f, matAccent);
-        Tent(root, new Vector3(-2f, 0f, 11f), 190f, matTent);
+        Place("Tent_Blue", root, new Vector3(-8f, 0f, -3f), 25f);
+        Place("Tent_Red", root, new Vector3(8f, 0f, -3.5f), -25f);
+        Place("Tent_Blue", root, new Vector3(-2f, 0f, 11f), 190f);
 
-        PicnicTable(root, new Vector3(7f, 0f, 4f));
-        Cooler(root, new Vector3(9.2f, 0f, 4.5f));
-        CampChair(root, new Vector3(-3.6f, 0f, 3.4f), 130f);
-        CampChair(root, new Vector3(3.4f, 0f, -3.2f), -30f);
+        Place("PicnicTable", root, new Vector3(7f, 0f, 4f));
+        Place("Cooler", root, new Vector3(9.2f, 0f, 4.5f));
+        Place("CampChair", root, new Vector3(-3.6f, 0f, 3.4f), 130f);
+        Place("CampChair", root, new Vector3(3.4f, 0f, -3.2f), -30f);
         Clothesline(root, new Vector3(-6.5f, 0f, 3.5f), new Vector3(-1.5f, 0f, 6.5f));
-        WoodPile(root, new Vector3(-5.2f, 0f, -1.2f), 20f);
-        Signpost(root, new Vector3(1.8f, 0f, -12.5f), 8f);
+        Place("WoodPile", root, new Vector3(-5.2f, 0f, -1.2f), 20f);
+        Place("Signpost", root, new Vector3(1.8f, 0f, -12.5f), 8f);
 
         Forest(root);
         Scatter(root);
@@ -100,7 +142,99 @@ public static class Stage2Builder
         NetworkPhase6Setup.EnsureSceneInBuildSettings(ScenePath);
 
         Debug.Log("[Stage2] 캠핑장 스테이지 생성 완료: " + ScenePath +
+                  "\n- 캠핑 프롭은 " + PropFolder + " 의 프리팹 인스턴스입니다. 씬에서 마음대로 옮기고 복제하세요." +
+                  "\n- 배치를 지킨 채 모양만 고치려면 'Tools > Stage > Rebuild Camp Props (씬 유지)'." +
                   "\n- 무기가 안 보이면 'Tools > Weapons > Build Weapon Prefabs'를 먼저 실행하고 다시 만드세요.");
+    }
+
+    // ---------------------------------------------------------------- 프롭 프리팹
+
+    /// <summary>
+    /// 캠핑 프롭을 전부 프리팹으로 굽는다.
+    ///
+    /// 예전에는 씬에 직접 그려 넣어서, 맵을 손보려면 씬을 다시 만들어야 했고
+    /// 그때마다 손으로 옮겨 둔 것이 날아갔다. 프리팹으로 두면
+    ///  · 씬에서는 위치·회전·크기만 바꾸면 되고(자유 배치)
+    ///  · 모양은 프리팹 하나만 고치면 모든 인스턴스에 반영된다.
+    /// </summary>
+    private static void BakeAllProps()
+    {
+        Prop("Campfire", t => Campfire(t, Vector3.zero));
+        Prop("Tripod", t => Tripod(t, Vector3.zero));
+        Prop("LogSeats", t => LogSeats(t, Vector3.zero, 2.4f));
+        Prop("Tent_Blue", t => Tent(t, Vector3.zero, 0f, matTent));
+        Prop("Tent_Red", t => Tent(t, Vector3.zero, 0f, matAccent));
+        Prop("PicnicTable", t => PicnicTable(t, Vector3.zero));
+        Prop("Cooler", t => Cooler(t, Vector3.zero));
+        Prop("CampChair", t => CampChair(t, Vector3.zero, 0f));
+        Prop("WoodPile", t => WoodPile(t, Vector3.zero, 0f));
+        Prop("Signpost", t => Signpost(t, Vector3.zero, 0f));
+        Prop("Tree_Pine", t => PineTree(t, Vector3.zero, 1f));
+        Prop("Tree_Broad", t => BroadTree(t, Vector3.zero, 1f));
+        Prop("Rock", t => RockModel(t));
+        Prop("Bush", t => BushModel(t));
+        Prop("Stump", t => StumpModel(t));
+    }
+
+    /// <summary>
+    /// 프롭 하나를 원점에 만들어 프리팹으로 굽는다.
+    /// 프롭 함수들은 자기 그룹을 자식으로 하나 만들므로, 그 자식을 프리팹 루트로 쓴다.
+    /// </summary>
+    private static GameObject Prop(string name, System.Action<Transform> build)
+    {
+        if (props.TryGetValue(name, out GameObject cached) && cached != null)
+            return cached;
+
+        if (!AssetDatabase.IsValidFolder(PropFolder))
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/Prefabs"))
+                AssetDatabase.CreateFolder("Assets", "Prefabs");
+            AssetDatabase.CreateFolder("Assets/Prefabs", "Camp");
+        }
+
+        var temp = new GameObject("__bake");
+        GameObject asset = null;
+        try
+        {
+            build(temp.transform);
+            if (temp.transform.childCount == 0)
+            {
+                Debug.LogError($"[Stage2] 프롭 '{name}' 이 아무것도 만들지 않았습니다.");
+                return null;
+            }
+
+            Transform prop = temp.transform.GetChild(0);
+            prop.SetParent(null, false);
+            prop.localPosition = Vector3.zero;
+            prop.localRotation = Quaternion.identity;
+            prop.name = name;
+
+            asset = PrefabUtility.SaveAsPrefabAsset(prop.gameObject, $"{PropFolder}/{name}.prefab");
+            Object.DestroyImmediate(prop.gameObject);
+        }
+        finally
+        {
+            Object.DestroyImmediate(temp);
+        }
+
+        props[name] = asset;
+        return asset;
+    }
+
+    /// <summary>구워 둔 프롭을 씬에 놓는다. 돌려주는 인스턴스는 마음대로 더 손봐도 된다.</summary>
+    private static GameObject Place(string name, Transform parent, Vector3 pos, float rotY = 0f, float scale = 1f)
+    {
+        if (!props.TryGetValue(name, out GameObject prefab) || prefab == null)
+        {
+            Debug.LogError($"[Stage2] 프롭 프리팹 '{name}' 을 찾지 못했습니다.");
+            return null;
+        }
+
+        var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        go.transform.localPosition = pos;
+        go.transform.localRotation = Quaternion.Euler(0f, rotY, 0f);
+        go.transform.localScale = Vector3.one * scale;
+        return go;
     }
 
     // ---------------------------------------------------------------- 지형
@@ -190,13 +324,14 @@ public static class Stage2Builder
 
         Prim(g, "Ash", PrimitiveType.Cylinder, new Vector3(0f, 0.03f, 0f), new Vector3(1.5f, 0.03f, 1.5f), matDark);
 
-        // 원뿔로 세운 장작
+        // 원뿔로 세운 장작 — 위로 갈수록 가운데로 모여야 한다.
+        // 기울기 부호는 Lean()이 잡아 준다(예전엔 반대로 들어가 위가 벌어져 있었다).
         for (int i = 0; i < 5; i++)
         {
             float a = i / 5f * Mathf.PI * 2f;
             Prim(g, "Log", PrimitiveType.Cylinder,
                 new Vector3(Mathf.Cos(a) * 0.16f, 0.3f, Mathf.Sin(a) * 0.16f),
-                new Vector3(Mathf.Sin(a) * 22f, 0f, -Mathf.Cos(a) * 22f),
+                LeanInward(a, 22f),
                 new Vector3(0.12f, 0.42f, 0.12f), matWoodDark);
         }
 
@@ -214,7 +349,7 @@ public static class Stage2Builder
         l.shadows = LightShadows.Soft;
     }
 
-    /// <summary>모닥불 위 삼각대와 주전자.</summary>
+    /// <summary>모닥불 위 삼각대와 주전자. 다리 셋이 주전자 쪽으로 모여야 한다.</summary>
     private static void Tripod(Transform p, Vector3 pos)
     {
         Transform g = Group(p, "Tripod", pos, 0f);
@@ -223,7 +358,7 @@ public static class Stage2Builder
             float a = i / 3f * Mathf.PI * 2f;
             Prim(g, "Leg", PrimitiveType.Cylinder,
                 new Vector3(Mathf.Cos(a) * 0.55f, 0.9f, Mathf.Sin(a) * 0.55f),
-                new Vector3(Mathf.Sin(a) * 18f, 0f, -Mathf.Cos(a) * 18f),
+                LeanInward(a, 18f),
                 new Vector3(0.06f, 0.95f, 0.06f), matWoodDark);
         }
         Box(g, "Hook", new Vector3(0f, 1.55f, 0f), new Vector3(0.03f, 0.5f, 0.03f), matMetal);
@@ -251,10 +386,12 @@ public static class Stage2Builder
 
         Box(g, "Floor", new Vector3(0f, 0.06f, 0f), new Vector3(2.3f, 0.12f, 3f), matDark);
 
+        // 지붕 두 장은 위에서 만나야 한다(∧). Z축 +회전은 위쪽을 -X로 눕히므로,
+        // 왼쪽 판은 음수·오른쪽 판은 양수여야 마루에서 모인다. 예전엔 반대라 ∨ 모양이었다.
         GameObject l = Box(g, "SideL", new Vector3(-0.62f, 0.95f, 0f), new Vector3(0.08f, 2.2f, 3.1f), mat);
         GameObject r = Box(g, "SideR", new Vector3(0.62f, 0.95f, 0f), new Vector3(0.08f, 2.2f, 3.1f), mat);
-        l.transform.localRotation = Quaternion.Euler(0f, 0f, 32f);
-        r.transform.localRotation = Quaternion.Euler(0f, 0f, -32f);
+        l.transform.localRotation = Quaternion.Euler(0f, 0f, -32f);
+        r.transform.localRotation = Quaternion.Euler(0f, 0f, 32f);
 
         Box(g, "Back", new Vector3(0f, 0.85f, -1.52f), new Vector3(2.2f, 1.7f, 0.06f), mat);
 
@@ -394,9 +531,9 @@ public static class Stage2Builder
                 float a = (i + Random.Range(-0.35f, 0.35f)) / count * Mathf.PI * 2f;
                 var at = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (radius + Random.Range(-1.5f, 1.5f));
                 if (Random.value < 0.55f)
-                    PineTree(g, at, Random.Range(0.85f, 1.5f));
+                    Place("Tree_Pine", g, at, Random.value * 360f, Random.Range(0.85f, 1.5f));
                 else
-                    BroadTree(g, at, Random.Range(0.8f, 1.35f));
+                    Place("Tree_Broad", g, at, Random.value * 360f, Random.Range(0.8f, 1.35f));
             }
         }
 
@@ -409,9 +546,9 @@ public static class Stage2Builder
         foreach (Vector3 at in inner)
         {
             if (Random.value < 0.5f)
-                PineTree(g, at, Random.Range(1f, 1.4f));
+                Place("Tree_Pine", g, at, Random.value * 360f, Random.Range(1f, 1.4f));
             else
-                BroadTree(g, at, Random.Range(0.9f, 1.2f));
+                Place("Tree_Broad", g, at, Random.value * 360f, Random.Range(0.9f, 1.2f));
         }
     }
 
@@ -456,28 +593,60 @@ public static class Stage2Builder
             float roll = Random.value;
             if (roll < 0.35f)
             {
-                var rock = Prim(g, "Rock", PrimitiveType.Cube, at + Vector3.up * 0.15f,
-                    new Vector3(Random.value * 40f, Random.value * 360f, Random.value * 40f),
-                    new Vector3(Random.Range(0.4f, 1.2f), Random.Range(0.3f, 0.8f), Random.Range(0.4f, 1.2f)),
-                    matStone);
-                rock.name = "Rock";
+                GameObject rock = Place("Rock", g, at + Vector3.up * 0.15f, Random.value * 360f);
+                if (rock != null)
+                {
+                    rock.transform.localRotation = Quaternion.Euler(Random.value * 40f, Random.value * 360f, Random.value * 40f);
+                    rock.transform.localScale = new Vector3(
+                        Random.Range(0.4f, 1.2f), Random.Range(0.3f, 0.8f), Random.Range(0.4f, 1.2f));
+                }
             }
             else if (roll < 0.75f)
             {
-                Transform b = Group(g, "Bush", at, Random.value * 360f);
-                float s = Random.Range(0.5f, 1f);
-                var a1 = Prim(b, "Leaf", PrimitiveType.Sphere, new Vector3(0f, s * 0.45f, 0f), Vector3.one * s, matLeafDark);
-                var a2 = Prim(b, "Leaf", PrimitiveType.Sphere, new Vector3(s * 0.4f, s * 0.35f, s * 0.2f), Vector3.one * s * 0.75f, matLeaf);
-                Object.DestroyImmediate(a1.GetComponent<Collider>());
-                Object.DestroyImmediate(a2.GetComponent<Collider>());
+                Place("Bush", g, at, Random.value * 360f, Random.Range(0.5f, 1f));
             }
             else
             {
-                Prim(g, "Stump", PrimitiveType.Cylinder, at + Vector3.up * 0.2f,
-                    new Vector3(Random.Range(-6f, 6f), 0f, Random.Range(-6f, 6f)),
-                    new Vector3(Random.Range(0.5f, 0.8f), 0.2f, Random.Range(0.5f, 0.8f)), matWoodDark);
+                GameObject stump = Place("Stump", g, at + Vector3.up * 0.2f);
+                if (stump != null)
+                {
+                    stump.transform.localRotation = Quaternion.Euler(Random.Range(-6f, 6f), 0f, Random.Range(-6f, 6f));
+                    stump.transform.localScale = new Vector3(
+                        Random.Range(0.5f, 0.8f), 0.2f, Random.Range(0.5f, 0.8f));
+                }
             }
         }
+    }
+
+    // ---------------------------------------------------------------- 잡목 모델 (프리팹으로 굽는다)
+
+    /// <summary>바위 한 덩이. 크기·각도는 씬에 놓을 때 인스턴스에서 흩뜨린다.</summary>
+    private static void RockModel(Transform p)
+    {
+        Transform g = Group(p, "Rock", Vector3.zero, 0f);
+        Prim(g, "Body", PrimitiveType.Cube, Vector3.zero, Vector3.one, matStone);
+    }
+
+    /// <summary>덤불. 크기 1 기준으로 만들고, 인스턴스 스케일로 키우고 줄인다.</summary>
+    private static void BushModel(Transform p)
+    {
+        Transform g = Group(p, "Bush", Vector3.zero, 0f);
+        var a = Prim(g, "Leaf", PrimitiveType.Sphere, new Vector3(0f, 0.45f, 0f), Vector3.one, matLeafDark);
+        var b = Prim(g, "Leaf", PrimitiveType.Sphere, new Vector3(0.4f, 0.35f, 0.2f), Vector3.one * 0.75f, matLeaf);
+        Object.DestroyImmediate(a.GetComponent<Collider>());
+        Object.DestroyImmediate(b.GetComponent<Collider>());
+    }
+
+    /// <summary>그루터기.</summary>
+    private static void StumpModel(Transform p)
+    {
+        Transform g = Group(p, "Stump", Vector3.zero, 0f);
+        GameObject body = Prim(g, "Body", PrimitiveType.Cylinder, Vector3.zero, Vector3.one, matWoodDark);
+
+        // 씬에 놓을 때 인스턴스에서 납작하게 눌린다. FixFlatCollider는 굽는 시점의 크기만 보므로
+        // 여기서 미리 박스로 바꿔 둬야 눌린 뒤에도 콜라이더가 모양을 따라간다.
+        Object.DestroyImmediate(body.GetComponent<Collider>());
+        body.AddComponent<BoxCollider>();
     }
 
     /// <summary>
@@ -497,7 +666,8 @@ public static class Stage2Builder
         return go;
     }
 
-    private static Mesh ConeMesh()
+    /// <summary>원뿔 메시(애셋으로 한 번만 굽는다). 타이틀 배경 빌더도 같은 것을 쓴다.</summary>
+    internal static Mesh ConeMesh()
     {
         if (coneMesh != null)
             return coneMesh;
@@ -725,8 +895,47 @@ public static class Stage2Builder
         go.transform.localScale = size;
         if (mat != null)
             go.GetComponent<MeshRenderer>().sharedMaterial = mat;
+
+        FixFlatCollider(go, type, size);
         return go;
     }
+
+    /// <summary>
+    /// 납작하게 눌러 놓은 원기둥·구의 콜라이더를 실제 모양에 맞춘다.
+    ///
+    /// CapsuleCollider와 SphereCollider의 반지름은 X·Z 스케일 중 <b>큰 쪽</b>을 따라가고,
+    /// 캡슐 높이는 최소 '지름'만큼 강제된다. 그래서 지름 9m·두께 0.005m로 눌러 만든
+    /// 잔디 무늬는 실제로는 높이 9m짜리 보이지 않는 덩어리가 되고,
+    /// 그 위에 올라선 플레이어는 허공을 걷는 것처럼 보인다.
+    ///
+    /// 이런 경우 BoxCollider로 갈아 끼운다. 박스는 스케일을 그대로 따라가므로
+    /// 두께 0.005m는 정말 0.005m가 되고, 바닥에 딱 붙어 아무 문제도 일으키지 않는다.
+    /// </summary>
+    private static void FixFlatCollider(GameObject go, PrimitiveType type, Vector3 size)
+    {
+        if (type != PrimitiveType.Cylinder && type != PrimitiveType.Sphere && type != PrimitiveType.Capsule)
+            return;
+
+        float widest = Mathf.Max(Mathf.Abs(size.x), Mathf.Abs(size.z));
+        if (Mathf.Abs(size.y) >= widest * 0.5f)
+            return; // 둥근 콜라이더가 모양에서 크게 벗어나지 않는다
+
+        Collider round = go.GetComponent<Collider>();
+        if (round != null)
+            Object.DestroyImmediate(round);
+
+        go.AddComponent<BoxCollider>(); // 메시 경계에 맞춰 자동으로 잡힌다
+    }
+
+    /// <summary>
+    /// 중심에서 각도 a 방향으로 세운 막대를 위쪽이 가운데로 모이도록 눕히는 회전.
+    ///
+    /// 오일러 (x, 0, z)에서 막대의 +Y는 대략 (-sin z, ..., cos z·sin x) 방향으로 간다.
+    /// 안쪽(-cos a, -sin a)으로 눕히려면 z = +cos a·각도, x = -sin a·각도 여야 한다.
+    /// 부호를 뒤집으면 위가 벌어지는 ∨ 모양이 된다 — 모닥불 장작과 삼각대가 그랬다.
+    /// </summary>
+    private static Vector3 LeanInward(float angle, float degrees)
+        => new Vector3(-Mathf.Sin(angle) * degrees, 0f, Mathf.Cos(angle) * degrees);
 
     private static void LoadMaterials()
     {

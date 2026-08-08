@@ -16,7 +16,7 @@ public class WeaponNetworkManager : NetworkBehaviour
 {
     public static WeaponNetworkManager Instance { get; private set; }
 
-    [Header("마검 스윙 살상 판정")]
+    [Header("무기 스윙 살상 판정")]
     [Tooltip("무기에 값이 없을 때 쓰는 기본 사거리 (m). 보통은 무기별 swingReach가 우선한다")]
     [SerializeField] private float lethalReach = 1.4f;
     [Tooltip("무기에 값이 없을 때 쓰는 기본 판정 반경 (m)")]
@@ -147,7 +147,7 @@ public class WeaponNetworkManager : NetworkBehaviour
         uint attacker = sender.identity.netId;
         RpcSwing(attacker); // 모든 클라에서 스윙 애니메이션
 
-        // 마검(무기)을 든 사람만 살상 가능. 내려치는 타이밍에 판정.
+        // 무기를 든 사람만 살상 가능. 내려치는 타이밍에 판정.
         if (HeldWeaponOf(attacker) >= 0)
             StartCoroutine(DelayedKill(attacker));
     }
@@ -164,7 +164,7 @@ public class WeaponNetworkManager : NetworkBehaviour
     {
         int weaponId = HeldWeaponOf(attackerNetId);
         if (weaponId < 0)
-            return; // 그 사이 마검을 놓쳤으면 살상 없음
+            return; // 그 사이 무기를 놓쳤으면 살상 없음
         if (!NetworkServer.spawned.TryGetValue(attackerNetId, out var attacker) || attacker == null)
             return;
 
@@ -191,7 +191,7 @@ public class WeaponNetworkManager : NetworkBehaviour
         }
     }
 
-    /// <summary>지정 플레이어가 든 마검을 그 자리에 떨어뜨린다(사망 시 권력 이동).</summary>
+    /// <summary>지정 플레이어가 든 무기를 그 자리에 떨어뜨린다(사망 시 권력 이동).</summary>
     [Server]
     public void ServerDropWeaponOf(uint holderNetId, Vector3 pos)
     {

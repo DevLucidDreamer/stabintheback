@@ -45,6 +45,11 @@ public class PlayerRagdoll : MonoBehaviour
         GameObject corpse = Instantiate(ragdollPrefab, position, rotation);
         CopyPose(corpse.transform);
 
+        // 시체도 본인 색으로. 시체 프리팹은 같은 goshi 모델이라 렌더러 구성이 일치한다.
+        var color = GetComponent<PlayerColor>();
+        if (color != null)
+            color.ApplyTo(corpse.transform);
+
         var script = corpse.GetComponent<RagdollCorpse>();
         if (script == null)
             script = corpse.AddComponent<RagdollCorpse>();

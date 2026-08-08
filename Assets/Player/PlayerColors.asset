@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c7469b70d20da843925ce70c61638ff, type: 3}
+  m_Name: PlayerColors
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerColorPalette
+  variants:
+  - displayName: "\uBE68\uAC15"
+    uiColor: {r: 0.90634316, g: 0.4124867, b: 0.43440172, a: 1}
+    renderers:
+    - materials:
+      - {fileID: 4874126678125670354, guid: 068f637c9cf022b4398f3e1d4e0c61c7, type: 3}
+      - {fileID: -6922793697723135513, guid: 068f637c9cf022b4398f3e1d4e0c61c7, type: 3}
+    sourceModel: Assets/Player/goshi(red).fbx
+  - displayName: "\uAE30\uBCF8"
+    uiColor: {r: 0.9063354, g: 0.9052235, b: 0.27983984, a: 1}
+    renderers:
+    - materials:
+      - {fileID: 4874126678125670354, guid: 75092788616a7a147b08a95d9b773319, type: 3}
+      - {fileID: -6922793697723135513, guid: 75092788616a7a147b08a95d9b773319, type: 3}
+    sourceModel: Assets/Player/goshi(final!).fbx
+  - displayName: "\uD30C\uB791"
+    uiColor: {r: 0.35266918, g: 0.389765, b: 0.9063396, a: 1}
+    renderers:
+    - materials:
+      - {fileID: 4874126678125670354, guid: 7f6d7affe2d60ad4e89e249ede0a3dc9, type: 3}
+      - {fileID: -6922793697723135513, guid: 7f6d7affe2d60ad4e89e249ede0a3dc9, type: 3}
+    sourceModel: Assets/Player/goshi(blue).fbx
+  - displayName: "\uCD08\uB85D"
+    uiColor: {r: 0.32505202, g: 0.90634316, b: 0.3157476, a: 1}
+    renderers:
+    - materials:
+      - {fileID: 4874126678125670354, guid: cc612609a3a261f45b515bb8cd969504, type: 3}
+      - {fileID: -6922793697723135513, guid: cc612609a3a261f45b515bb8cd969504, type: 3}
+    sourceModel: Assets/Player/goshi(green).fbx

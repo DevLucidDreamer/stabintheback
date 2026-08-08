@@ -649,6 +649,7 @@ GameObject:
   - component: {fileID: 1762871598044365092}
   - component: {fileID: 4833209538471050626}
   - component: {fileID: 1251604038556726830}
+  - component: {fileID: 3629179602744080273}
   m_Layer: 0
   m_Name: NetworkPlayer
   m_TagString: Untagged
@@ -941,6 +942,24 @@ MonoBehaviour:
   launchForce: 3.5
   launchSpin: 3
   poseSource: {fileID: 0}
+--- !u!114 &3629179602744080273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7961999844373101444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6763bb1137addaa468e0c9a1417484ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerColor
+  syncMethod: 0
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  palette: {fileID: 11400000, guid: 9b65f53a30179e74aaf0eddfd55ba372, type: 2}
+  modelRoot: {fileID: 0}
 --- !u!1 &8655852113356232814
 GameObject:
   m_ObjectHideFlags: 0

@@ -2,9 +2,9 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// 마검 원킬 + 즉시 리스폰 (Phase 5).
-/// - 체력 개념 없이 마검에 한 대 맞으면 죽는다(서버 권한).
-/// - 죽으면 즉시 스폰 지점으로 리스폰하고, 들고 있던 마검은 죽은 자리에 떨어진다(권력 이동).
+/// 무기 원킬 + 즉시 리스폰 (Phase 5).
+/// - 체력 개념 없이 무기에 한 대 맞으면 죽는다(서버 권한).
+/// - 죽으면 즉시 스폰 지점으로 리스폰하고, 들고 있던 무기는 죽은 자리에 떨어진다(권력 이동).
 /// - 죽은 자리에는 래그돌 시체가 남아 맞은 방향으로 날아간다(PlayerRagdoll).
 /// - 리스폰 직후 짧은 무적으로 스폰킬을 막는다.
 /// </summary>
@@ -34,7 +34,7 @@ public class PlayerHealth : NetworkBehaviour
             return; // 무적/중복 처리 방지
         invulnUntil = Time.time + spawnProtection;
 
-        // 들고 있던 마검을 떨어뜨려 권력을 이동시킨다.
+        // 들고 있던 무기를 떨어뜨려 권력을 이동시킨다.
         var weapons = WeaponNetworkManager.Instance;
         if (weapons != null)
             weapons.ServerDropWeaponOf(netId, transform.position + Vector3.up * 0.5f);
