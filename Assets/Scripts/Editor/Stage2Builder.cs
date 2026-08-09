@@ -35,6 +35,7 @@ public static class Stage2Builder
     private static Material matTent, matTentDark, matFlame, matEmber;
     private static Material matLeaf, matLeafDark, matLeafLight;
     private static Material matAccent, matWater, matRope;
+    private static Material matMeat, matFat, matCorn, matHusk, matGrill, matCoal;
 
     /// <summary>
     /// 프롭 프리팹만 다시 굽는다. 씬은 건드리지 않는다.
@@ -92,8 +93,13 @@ public static class Stage2Builder
         Terrain(root);
         Lake(root, new Vector3(15f, 0f, 13f), 7.5f);
 
-        Place("Campfire", root, new Vector3(0f, 0f, 0f));
-        Place("Tripod", root, new Vector3(0f, 0f, 0f));
+        // 캠프의 심장 — 불을 피울 화로와 그 옆의 바베큐 그릴.
+        // 프리팹으로 굽지 않고 씬에 직접 짓는다. 스크립트가 자기 부품(장작·불꽃·불빛)을
+        // 참조로 들고 있어야 하는데, 프리팹 인스턴스에 그 배선을 심는 것보다 이쪽이 확실하다.
+        BuildFirepit(root, new Vector3(0f, 0f, 0f));
+        BuildGrill(root, new Vector3(3.4f, 0f, 0.9f), -28f);
+
+        Place("Tripod", root, new Vector3(-1.9f, 0f, -1.6f));
         Place("LogSeats", root, new Vector3(0f, 0f, 0f));
 
         Place("Tent_Blue", root, new Vector3(-8f, 0f, -3f), 25f);
@@ -106,7 +112,7 @@ public static class Stage2Builder
         Place("CampChair", root, new Vector3(3.4f, 0f, -3.2f), -30f);
         Clothesline(root, new Vector3(-6.5f, 0f, 3.5f), new Vector3(-1.5f, 0f, 6.5f));
         Place("WoodPile", root, new Vector3(-5.2f, 0f, -1.2f), 20f);
-        Place("Signpost", root, new Vector3(1.8f, 0f, -12.5f), 8f);
+        Place("Signpost", root, new Vector3(-3.4f, 0f, -12.5f), 8f);
 
         Forest(root);
         Scatter(root);
@@ -115,12 +121,11 @@ public static class Stage2Builder
         // 배칭과 라이트맵 대상이 되게 한다. (무기·준비물은 움직이므로 제외)
         MarkStatic(root, "Terrain", "Lake", "Forest", "Scatter");
 
-        // 준비물 (캠핑장 세팅 목표)
-        Collectible(root, "장작", new Vector3(2.2f, 0.15f, 1.2f), FirewoodModel);
-        Collectible(root, "마시멜로", new Vector3(-2.2f, 0.1f, 1.0f), MarshmallowModel);
-        Collectible(root, "부탄가스", new Vector3(7f, 0.85f, 3.6f), ButaneModel);
-        Collectible(root, "랜턴", new Vector3(-6.5f, 2.05f, 3.5f), LanternModel);   // 빨랫줄 기둥에 걸어 둠
-        Collectible(root, "낚싯대", new Vector3(9.4f, 0.32f, 9.25f), FishingRodModel); // 호수 잔교 위
+        // 재료 — 캠핑장 구석구석에 흩어 놓는다.
+        PlaceIngredients(root);
+
+        // 안내 팻말 (목표를 말로 한 번 더 알려 준다)
+        GoalSigns(root);
 
         // 무기 — .blend에서 가져온 음식 무기들을 캠핑장 곳곳에 흩뿌린다.
         PlaceWeapons(root);
@@ -128,22 +133,25 @@ public static class Stage2Builder
         // 스폰 포인트
         SpawnPoints(new Vector3(0f, 1f, -14f));
 
-        // 매니저(체크리스트/무기) + ID 부여 — 기존 셋업 로직 재사용
-        NetworkPhase3Setup.SetupChecklistSync();
+        // 진행 매니저(재료·페이즈·굽기) + 무기 동기화 + 하늘 연출
+        CampGameManager game = NetworkPhase3Setup.EnsureManager();
+        AssignIngredientIds();
         NetworkPhase4Setup.SetupWeaponSync();
+        AddDayNight();
 
-        // 탈출존: 캠핑장을 마치면 대기실로 돌아간다 (대기실 → 캠핑장 → 대기실 순환).
-        var exit = NetworkPhase6Setup.CreateEscapeZone(
-            new Vector3(0f, 1.5f, 24f), new Vector3(4f, 3f, 3f), LobbyScene, false, LobbyScene);
-        Box(exit.transform, "ExitSign", new Vector3(0f, 1.2f, 0.2f), new Vector3(3f, 0.05f, 0.05f), matWood);
+        // 탈출존은 두지 않는다 — 바베큐를 다 구우면 CampGameManager가 대기실로 돌려보낸다.
+        if (game == null)
+            Debug.LogError("[Stage2] CampGameManager를 만들지 못했습니다.");
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         NetworkPhase6Setup.EnsureSceneInBuildSettings("Assets/Scenes/Lobby.unity");
         NetworkPhase6Setup.EnsureSceneInBuildSettings(ScenePath);
 
-        Debug.Log("[Stage2] 캠핑장 스테이지 생성 완료: " + ScenePath +
+        Debug.Log("[Stage2] 캠핑장 생성 완료: " + ScenePath +
+                  "\n목표: 장작·고기·야채를 모두 모으면 해가 지고, 화로에 불을 피워 바베큐를 굽는다." +
                   "\n- 캠핑 프롭은 " + PropFolder + " 의 프리팹 인스턴스입니다. 씬에서 마음대로 옮기고 복제하세요." +
                   "\n- 배치를 지킨 채 모양만 고치려면 'Tools > Stage > Rebuild Camp Props (씬 유지)'." +
+                  "\n- 재료를 손으로 더 놓았다면 'Tools > Multiplayer/Phase 3 > Setup Camp Game Sync'로 ID를 다시 매기세요." +
                   "\n- 무기가 안 보이면 'Tools > Weapons > Build Weapon Prefabs'를 먼저 실행하고 다시 만드세요.");
     }
 
@@ -159,7 +167,6 @@ public static class Stage2Builder
     /// </summary>
     private static void BakeAllProps()
     {
-        Prop("Campfire", t => Campfire(t, Vector3.zero));
         Prop("Tripod", t => Tripod(t, Vector3.zero));
         Prop("LogSeats", t => LogSeats(t, Vector3.zero, 2.4f));
         Prop("Tent_Blue", t => Tent(t, Vector3.zero, 0f, matTent));
@@ -307,9 +314,15 @@ public static class Stage2Builder
 
     // ---------------------------------------------------------------- 캠프 프롭
 
-    private static void Campfire(Transform p, Vector3 pos)
+    /// <summary>
+    /// 캠프 한가운데의 화로. 저녁이 되면 여기에 장작을 넣어 불을 피운다.
+    ///
+    /// 장작과 불꽃은 만들어만 두고 <see cref="Firepit"/>이 상황에 따라 켜고 끈다 —
+    /// 처음에는 빈 돌 화덕이고, 장작을 넣을수록 하나씩 쌓이고, 다 채우면 타오른다.
+    /// </summary>
+    private static void BuildFirepit(Transform p, Vector3 pos)
     {
-        Transform g = Group(p, "Campfire", pos, 0f);
+        Transform g = Group(p, "Firepit", pos, 0f);
 
         // 돌 화덕 — 크기와 각도를 흩어 놓으면 훨씬 자연스럽다.
         for (int i = 0; i < 14; i++)
@@ -325,28 +338,111 @@ public static class Stage2Builder
         Prim(g, "Ash", PrimitiveType.Cylinder, new Vector3(0f, 0.03f, 0f), new Vector3(1.5f, 0.03f, 1.5f), matDark);
 
         // 원뿔로 세운 장작 — 위로 갈수록 가운데로 모여야 한다.
-        // 기울기 부호는 Lean()이 잡아 준다(예전엔 반대로 들어가 위가 벌어져 있었다).
-        for (int i = 0; i < 5; i++)
+        // 기울기 부호는 LeanInward가 잡아 준다.
+        const int logCount = 4;
+        var logs = new GameObject[logCount];
+        for (int i = 0; i < logCount; i++)
         {
-            float a = i / 5f * Mathf.PI * 2f;
-            Prim(g, "Log", PrimitiveType.Cylinder,
+            float a = i / (float)logCount * Mathf.PI * 2f;
+            logs[i] = Prim(g, "Log" + i, PrimitiveType.Cylinder,
                 new Vector3(Mathf.Cos(a) * 0.16f, 0.3f, Mathf.Sin(a) * 0.16f),
                 LeanInward(a, 22f),
                 new Vector3(0.12f, 0.42f, 0.12f), matWoodDark);
+            logs[i].SetActive(false); // 넣기 전에는 비어 있다
         }
 
-        Prim(g, "Flame", PrimitiveType.Sphere, new Vector3(0f, 0.55f, 0f), new Vector3(0.44f, 0.72f, 0.44f), matFlame);
-        Prim(g, "FlameTip", PrimitiveType.Sphere, new Vector3(0f, 0.92f, 0f), new Vector3(0.22f, 0.36f, 0.22f), matEmber);
+        var flames = new[]
+        {
+            Prim(g, "Flame", PrimitiveType.Sphere, new Vector3(0f, 0.55f, 0f), new Vector3(0.44f, 0.72f, 0.44f), matFlame),
+            Prim(g, "FlameTip", PrimitiveType.Sphere, new Vector3(0f, 0.92f, 0f), new Vector3(0.22f, 0.36f, 0.22f), matEmber),
+        };
+        foreach (GameObject flame in flames)
+        {
+            Object.DestroyImmediate(flame.GetComponent<Collider>()); // 불에 걸려 넘어지지 않게
+            flame.SetActive(false);
+        }
 
         var lgo = new GameObject("FireLight");
         lgo.transform.SetParent(g, false);
         lgo.transform.localPosition = new Vector3(0f, 0.8f, 0f);
-        var l = lgo.AddComponent<Light>();
-        l.type = LightType.Point;
-        l.color = new Color(1f, 0.6f, 0.25f);
-        l.range = 16f;
-        l.intensity = 3.5f;
-        l.shadows = LightShadows.Soft;
+        var light = lgo.AddComponent<Light>();
+        light.type = LightType.Point;
+        light.color = new Color(1f, 0.6f, 0.25f);
+        light.range = 18f;
+        light.intensity = 3.6f;
+        light.shadows = LightShadows.Soft;
+        light.enabled = false;
+
+        // 조준을 받아 줄 몸통. 돌 하나하나를 노리게 하면 조작이 까다롭다.
+        var hit = Prim(g, "Hitbox", PrimitiveType.Cylinder, new Vector3(0f, 0.45f, 0f),
+            new Vector3(2.2f, 0.45f, 2.2f), null);
+        Object.DestroyImmediate(hit.GetComponent<MeshRenderer>());
+        Object.DestroyImmediate(hit.GetComponent<MeshFilter>());
+
+        var pit = g.gameObject.AddComponent<Firepit>();
+        pit.SetDisplayName("화로");
+        pit.Configure(logs, flames, light);
+    }
+
+    /// <summary>
+    /// 바베큐 그릴. 불이 붙은 뒤부터 고기와 야채를 올릴 수 있다.
+    /// 칸(SlotAnchor)의 개수가 곧 동시에 구울 수 있는 개수다.
+    /// </summary>
+    private static void BuildGrill(Transform p, Vector3 pos, float rotY)
+    {
+        Transform g = Group(p, "BarbecueGrill", pos, rotY);
+
+        // 다리 넷
+        foreach (float x in new[] { -0.52f, 0.52f })
+        foreach (float z in new[] { -0.3f, 0.3f })
+            Box(g, "Leg", new Vector3(x, 0.32f, z), new Vector3(0.055f, 0.64f, 0.055f), matMetal);
+
+        // 숯을 담는 통
+        Box(g, "Basin", new Vector3(0f, 0.66f, 0f), new Vector3(1.24f, 0.16f, 0.74f), matGrill);
+        Box(g, "RimN", new Vector3(0f, 0.76f, -0.37f), new Vector3(1.28f, 0.06f, 0.06f), matGrill);
+        Box(g, "RimS", new Vector3(0f, 0.76f, 0.37f), new Vector3(1.28f, 0.06f, 0.06f), matGrill);
+        Box(g, "Handle", new Vector3(-0.68f, 0.72f, 0f), new Vector3(0.12f, 0.05f, 0.3f), matWoodDark);
+
+        // 숯 — 불이 붙어야 보인다.
+        var coals = new GameObject[6];
+        for (int i = 0; i < coals.Length; i++)
+        {
+            var at = new Vector3((i % 3 - 1) * 0.34f, 0.72f, (i / 3 - 0.5f) * 0.28f);
+            coals[i] = Prim(g, "Coal" + i, PrimitiveType.Cube, at,
+                new Vector3(0f, Random.Range(0f, 60f), 0f),
+                new Vector3(0.26f, 0.05f, 0.2f), matCoal);
+            Object.DestroyImmediate(coals[i].GetComponent<Collider>());
+            coals[i].SetActive(false);
+        }
+
+        // 석쇠 — 가는 막대 여러 개
+        Transform grate = Group(g, "Grate", new Vector3(0f, 0.82f, 0f), 0f);
+        for (int i = 0; i < 9; i++)
+        {
+            var bar = Box(grate, "Bar", new Vector3((i - 4) * 0.13f, 0f, 0f),
+                new Vector3(0.025f, 0.02f, 0.66f), matMetal);
+            Object.DestroyImmediate(bar.GetComponent<Collider>());
+        }
+
+        // 재료가 올라갈 자리 4칸
+        const int slots = 4;
+        var anchors = new Transform[slots];
+        for (int i = 0; i < slots; i++)
+        {
+            var go = new GameObject("Slot" + i);
+            go.transform.SetParent(g, false);
+            go.transform.localPosition = new Vector3((i - (slots - 1) * 0.5f) * 0.29f, 0.87f, 0f);
+            anchors[i] = go.transform;
+        }
+
+        // 조준을 받아 줄 몸통 하나. 석쇠 막대를 하나씩 노리게 하면 안내 문구가 깜빡인다.
+        var hit = Box(g, "Hitbox", new Vector3(0f, 0.72f, 0f), new Vector3(1.35f, 0.5f, 0.85f), null);
+        Object.DestroyImmediate(hit.GetComponent<MeshRenderer>());
+        Object.DestroyImmediate(hit.GetComponent<MeshFilter>());
+
+        var grill = g.gameObject.AddComponent<BarbecueGrill>();
+        grill.SetDisplayName("바베큐 그릴");
+        grill.Configure(anchors, coals, JalnanFontAssetBuilder.Ensure());
     }
 
     /// <summary>모닥불 위 삼각대와 주전자. 다리 셋이 주전자 쪽으로 모여야 한다.</summary>
@@ -708,35 +804,99 @@ public static class Stage2Builder
         return coneMesh;
     }
 
-    // ---------------------------------------------------------------- 준비물 모델
+    // ---------------------------------------------------------------- 재료 배치
+
+    /// <summary>
+    /// 장작·고기·야채를 캠핑장 곳곳에 흩어 놓는다.
+    ///
+    /// 한자리에 모아 두면 한 사람이 다 주워 버려서 협동이 성립하지 않는다.
+    /// 캠프 안(식탁·쿨러 위), 텐트 주변, 숲 가장자리, 호숫가로 갈라 놓아
+    /// 흩어져서 뒤지는 편이 항상 빠르게 만든다.
+    ///
+    /// 개수는 <see cref="CampGameManager"/>가 씬을 세어 자동으로 목표에 반영한다.
+    /// 여기서 좌표를 더하거나 빼면 목표도 그만큼 따라온다.
+    /// </summary>
+    private static void PlaceIngredients(Transform root)
+    {
+        Transform g = Group(root, "Ingredients", Vector3.zero, 0f);
+
+        // 장작 — 불을 피우는 연료. 캠프 바깥쪽에 둬서 한 번은 나가게 만든다.
+        Vector3[] firewood =
+        {
+            new Vector3(-4.6f, 0.12f, -2.1f),   // 장작더미 옆
+            new Vector3(-13.4f, 0.12f, 7.4f),   // 서쪽 숲
+            new Vector3(11.6f, 0.12f, -7.2f),   // 동쪽 그루터기 근처
+            new Vector3(13.9f, 0.12f, 10.4f),   // 호수 건너편
+        };
+        foreach (Vector3 at in firewood)
+            Collectible(g, Ingredient.Firewood, "장작", at, FirewoodModel);
+
+        // 고기 — 쿨러·식탁처럼 "있을 법한 자리"와 텐트 주변에.
+        Vector3[] meat =
+        {
+            new Vector3(9.2f, 0.72f, 4.5f),     // 쿨러 위
+            new Vector3(6.4f, 0.86f, 3.8f),     // 피크닉 식탁 위
+            new Vector3(-8.3f, 0.1f, -1.1f),    // 왼쪽 텐트 앞
+            new Vector3(-2.1f, 0.1f, 9.5f),     // 안쪽 텐트 앞
+        };
+        foreach (Vector3 at in meat)
+            Collectible(g, Ingredient.Meat, "고기", at, MeatModel);
+
+        // 야채 — 나머지 방향을 채운다.
+        Vector3[] vegetable =
+        {
+            new Vector3(7.7f, 0.86f, 4.3f),     // 식탁 위
+            new Vector3(4.4f, 0.1f, 13.6f),     // 북쪽 덤불가
+            new Vector3(14.6f, 0.1f, 5.9f),     // 호숫가
+        };
+        foreach (Vector3 at in vegetable)
+            Collectible(g, Ingredient.Vegetable, "야채", at, VegetableModel);
+    }
+
+    /// <summary>흩어 놓은 재료에 고유 ID를 매긴다. 서버가 이 번호로 획득을 확정한다.</summary>
+    private static void AssignIngredientIds()
+    {
+        CollectibleItem[] items = Object.FindObjectsByType<CollectibleItem>(
+            FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        for (int i = 0; i < items.Length; i++)
+        {
+            items[i].SetItemId(i);
+            EditorUtility.SetDirty(items[i]);
+        }
+
+        Debug.Log($"[Stage2] 재료 {items.Length}개 배치 완료 (ID 부여됨).");
+    }
+
+    // ---------------------------------------------------------------- 재료 모델
 
     private static void FirewoodModel(Transform g)
     {
         Prim(g, "Log1", PrimitiveType.Cylinder, new Vector3(0f, 0.08f, 0f), new Vector3(90f, 0f, 0f), new Vector3(0.12f, 0.35f, 0.12f), matWood);
-        Prim(g, "Log2", PrimitiveType.Cylinder, new Vector3(0.14f, 0.08f, 0f), new Vector3(90f, 0f, 0f), new Vector3(0.12f, 0.35f, 0.12f), matWood);
+        Prim(g, "Log2", PrimitiveType.Cylinder, new Vector3(0.14f, 0.08f, 0f), new Vector3(90f, 0f, 0f), new Vector3(0.12f, 0.35f, 0.12f), matWoodDark);
         Prim(g, "Log3", PrimitiveType.Cylinder, new Vector3(0.07f, 0.22f, 0f), new Vector3(90f, 0f, 0f), new Vector3(0.12f, 0.35f, 0.12f), matWood);
     }
 
-    private static void MarshmallowModel(Transform g)
+    /// <summary>접시에 얹힌 생고기 두 덩이. 붉은 살에 흰 지방 결을 넣어 멀리서도 알아보게.</summary>
+    private static void MeatModel(Transform g)
     {
-        Box(g, "Bag", new Vector3(0f, 0.12f, 0f), new Vector3(0.22f, 0.24f, 0.14f), matAccent);
+        Box(g, "Tray", new Vector3(0f, 0.02f, 0f), new Vector3(0.4f, 0.03f, 0.3f), matFat);
+        Box(g, "Cut1", new Vector3(-0.07f, 0.07f, 0f), new Vector3(0.22f, 0.07f, 0.2f), matMeat);
+        Box(g, "Cut2", new Vector3(0.09f, 0.08f, 0.02f), new Vector3(0.2f, 0.07f, 0.18f), matMeat);
+        Box(g, "Marble", new Vector3(-0.07f, 0.11f, 0f), new Vector3(0.16f, 0.012f, 0.05f), matFat);
     }
 
-    private static void ButaneModel(Transform g)
+    /// <summary>껍질을 반쯤 벗긴 옥수수. 노란 알과 초록 껍질 대비가 확실하다.</summary>
+    private static void VegetableModel(Transform g)
     {
-        Prim(g, "Can", PrimitiveType.Cylinder, new Vector3(0f, 0.1f, 0f), new Vector3(90f, 0f, 0f), new Vector3(0.1f, 0.14f, 0.1f), matMetal);
-    }
+        Prim(g, "Cob", PrimitiveType.Cylinder, new Vector3(0f, 0.09f, 0f), new Vector3(90f, 0f, 0f),
+            new Vector3(0.09f, 0.2f, 0.09f), matCorn);
 
-    private static void LanternModel(Transform g)
-    {
-        Box(g, "Body", new Vector3(0f, 0.14f, 0f), new Vector3(0.18f, 0.28f, 0.18f), matMetal);
-        Prim(g, "Glass", PrimitiveType.Sphere, new Vector3(0f, 0.14f, 0f), new Vector3(0.14f, 0.14f, 0.14f), matFlame);
-    }
+        GameObject huskA = Box(g, "Husk1", new Vector3(0.02f, 0.07f, -0.16f), new Vector3(0.1f, 0.03f, 0.2f), matHusk);
+        huskA.transform.localRotation = Quaternion.Euler(18f, 12f, 0f);
 
-    private static void FishingRodModel(Transform g)
-    {
-        Prim(g, "Rod", PrimitiveType.Cylinder, new Vector3(0f, 0.05f, 0.6f), new Vector3(90f, 0f, 0f), new Vector3(0.03f, 0.7f, 0.03f), matDark);
-        Box(g, "Reel", new Vector3(0f, 0.05f, -0.05f), new Vector3(0.1f, 0.1f, 0.08f), matMetal);
+        GameObject huskB = Box(g, "Husk2", new Vector3(-0.03f, 0.07f, -0.17f), new Vector3(0.09f, 0.03f, 0.19f), matLeafDark);
+        huskB.transform.localRotation = Quaternion.Euler(14f, -20f, 0f);
     }
 
     // ---------------------------------------------------------------- 무기 배치
@@ -818,19 +978,20 @@ public static class Stage2Builder
     // ---------------------------------------------------------------- 유틸
 
     /// <summary>
-    /// 늦은 오후 느낌의 조명. 해를 낮게 깔아 그림자를 길게 뽑고,
-    /// 하늘/환경광을 따뜻하게 맞춰 프리미티브 덩어리들이 밋밋해 보이지 않게 한다.
+    /// 한낮의 해. 실제 값은 <see cref="DayNightController"/>가 매 프레임 덮어쓰므로
+    /// 여기서는 "시작 상태"만 맞춰 둔다(에디터에서 씬을 열었을 때의 모습).
     /// </summary>
     private static void AddSun()
     {
         var go = new GameObject("Directional Light");
-        go.transform.rotation = Quaternion.Euler(28f, -35f, 0f);
+        go.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
         var l = go.AddComponent<Light>();
         l.type = LightType.Directional;
-        l.color = new Color(1f, 0.91f, 0.75f);
+        l.color = new Color(1f, 0.95f, 0.84f);
         l.intensity = 1.35f;
         l.shadows = LightShadows.Soft;
         l.shadowStrength = 0.75f;
+        RenderSettings.sun = l;
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = new Color(0.55f, 0.66f, 0.82f);
@@ -845,11 +1006,50 @@ public static class Stage2Builder
         RenderSettings.fogEndDistance = 85f;
     }
 
-    private static Transform Collectible(Transform parent, string displayName, Vector3 pos, System.Action<Transform> model)
+    /// <summary>재료를 다 모으면 해를 넘겨 줄 연출 컨트롤러를 씬에 둔다.</summary>
+    private static void AddDayNight()
     {
-        Transform g = Group(parent, displayName, pos, 0f);
+        if (Object.FindFirstObjectByType<DayNightController>(FindObjectsInactive.Include) != null)
+            return;
+
+        var go = new GameObject("DayNight");
+        go.AddComponent<DayNightController>();
+    }
+
+    /// <summary>
+    /// 목표를 말로 알려 주는 팻말. 스폰 지점과 화로 앞에 세운다.
+    /// 팻말은 rotY가 가리키는 쪽에서 읽히므로, 스폰(0, -14)에서 북쪽으로 걸어오는
+    /// 사람이 정면으로 보도록 둘 다 남쪽을 보게 세운다.
+    /// </summary>
+    private static void GoalSigns(Transform root)
+    {
+        Sign(root, "SpawnSign", new Vector3(2.6f, 0f, -12.2f), 195f,
+            "캠핑장에서 장작·고기·야채를 모아라\n다 모으면 해가 진다");
+
+        Sign(root, "FireSign", new Vector3(-3.2f, 0f, -3.4f), 165f,
+            "저녁이 되면 화로에 장작을 넣고\n그릴에 바베큐를 구워라");
+    }
+
+    /// <summary>나무 팻말 + TMP 글자. rotY가 향하는 쪽(+Z)에서 읽힌다.</summary>
+    private static void Sign(Transform parent, string name, Vector3 pos, float rotY, string text)
+    {
+        Transform g = Group(parent, name, pos, rotY);
+        Box(g, "Post", new Vector3(0f, 0.7f, 0f), new Vector3(0.1f, 1.4f, 0.1f), matWoodDark);
+        Box(g, "Board", new Vector3(0f, 1.6f, 0f), new Vector3(3.2f, 0.95f, 0.08f), matWood);
+
+        // 판보다 살짝 안쪽으로 잡아 글자가 테두리에 닿지 않게 한다.
+        BuilderText.World(g, "Text", new Vector3(0f, 1.6f, 0.055f), text,
+            new Vector2(2.9f, 0.76f), BuilderText.SignInk);
+    }
+
+    /// <summary>주울 수 있는 재료 하나를 놓는다. 방향은 조금씩 틀어 놓아야 놓아둔 티가 난다.</summary>
+    private static Transform Collectible(Transform parent, Ingredient kind, string displayName,
+        Vector3 pos, System.Action<Transform> model)
+    {
+        Transform g = Group(parent, displayName, pos, Random.Range(0f, 360f));
         var c = g.gameObject.AddComponent<CollectibleItem>();
         c.SetDisplayName(displayName);
+        c.SetKind(kind);
         model(g);
         return g;
     }
@@ -958,6 +1158,14 @@ public static class Stage2Builder
         matAccent = GetMat("Accent", new Color(0.8f, 0.3f, 0.2f));
         matWater = GetMat("Water", new Color(0.22f, 0.45f, 0.58f));
         matRope = GetMat("Rope", new Color(0.72f, 0.66f, 0.5f));
+
+        // 바베큐 재료와 조리 도구
+        matMeat = GetMat("Meat", new Color(0.78f, 0.27f, 0.28f));
+        matFat = GetMat("Fat", new Color(0.94f, 0.88f, 0.82f));
+        matCorn = GetMat("Corn", new Color(0.96f, 0.79f, 0.24f));
+        matHusk = GetMat("Husk", new Color(0.44f, 0.66f, 0.28f));
+        matGrill = GetMat("Grill", new Color(0.24f, 0.25f, 0.27f));
+        matCoal = GetMat("Coal", new Color(0.95f, 0.35f, 0.1f));
     }
 
     private static Material GetMat(string name, Color color) => BuilderMaterials.Ensure("Camp_" + name, color);

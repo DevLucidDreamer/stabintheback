@@ -45,6 +45,9 @@ public class PlayerInteraction : MonoBehaviour
     private bool swingHitDone;      // 이번 스윙에서 판정을 이미 했는지
     private bool inputEnabled = true;
 
+    private Mirror.NetworkIdentity identity;
+    private bool identityCached;
+
     public Transform HandSocket => holdSocket;
     public Weapon HeldWeapon => heldWeapon;
 
@@ -96,6 +99,26 @@ public class PlayerInteraction : MonoBehaviour
 
         if (kb != null && kb.gKey.wasPressedThisFrame)
             Drop();
+    }
+
+    /// <summary>
+    /// HUD 갱신은 LateUpdate에서 한다.
+    /// Update는 조준이 풀렸을 때 중간에 빠져나가므로, 거기 두면 문구가 남아 버린다.
+    /// </summary>
+    private void LateUpdate() => UpdateHud();
+
+    private void OnDisable()
+    {
+        if (!IsLocalView())
+            return;
+
+        GameHud hud = GameHud.Current;
+        if (hud == null)
+            return;
+
+        hud.SetCrosshair(false);
+        hud.SetPrompt(string.Empty);
+        hud.SetBottom(string.Empty);
     }
 
     /// <summary>화면 중앙에서 레이캐스트하여 조준 중인 Interactable을 찾는다.</summary>
@@ -258,52 +281,75 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
-    // ------------------------------------------------------------ 간단 UI (조준점 + 안내)
+    // ------------------------------------------------------------ HUD (조준점 + 안내)
 
-    private void OnGUI()
+    /// <summary>
+    /// 조준점과 안내 문구를 HUD에 반영한다.
+    /// 내 화면에만 그려야 하므로 로컬 플레이어일 때만 손댄다 —
+    /// 다른 사람의 플레이어 오브젝트도 같은 스크립트를 들고 있기 때문이다.
+    /// </summary>
+    private void UpdateHud()
     {
-        if (!inputEnabled)
+        if (!IsLocalView())
             return;
 
-        if (Cursor.lockState != CursorLockMode.Locked)
-            return;
+        GameHud hud = GameHud.Ensure();
+        bool active = inputEnabled && Cursor.lockState == CursorLockMode.Locked;
 
-        float cx = Screen.width * 0.5f;
-        float cy = Screen.height * 0.5f;
+        hud.SetCrosshair(active);
 
-        var style = new GUIStyle(GUI.skin.label)
+        if (!active)
         {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 15,
-        };
-        style.normal.textColor = Color.white;
+            hud.SetPrompt(string.Empty);
+            hud.SetBottom(string.Empty);
+            return;
+        }
 
-        // 조준점
-        var dotStyle = new GUIStyle(style) { fontSize = 24 };
-        GUI.Label(new Rect(cx - 10f, cy - 12f, 20f, 24f), "·", dotStyle);
+        hud.SetPrompt(BuildPrompt());
+        hud.SetBottom(heldWeapon == null
+            ? "[좌클릭] 줍기 · 사용    [E] 재료 목록    WASD 이동 · Space 점프"
+            : "[좌클릭] 휘두르기    [우클릭] 사용    [G] 내려놓기    [E] 재료 목록");
+    }
 
-        // 안내 문구
-        string prompt = null;
+    private string BuildPrompt()
+    {
         if (heldWeapon == null)
+            return target != null ? "[좌클릭] " + target.GetPrompt() : string.Empty;
+
+        // 무기를 들고 있으면 좌클릭은 스윙에 묶인다. 조작은 우클릭으로 안내한다.
+        return target != null && !(target is Weapon)
+            ? "[우클릭] " + target.GetPrompt()
+            : string.Empty;
+    }
+
+    /// <summary>이 컴포넌트가 내 화면을 담당하는가(싱글플레이면 항상 참).</summary>
+    private bool IsLocalView()
+    {
+        // 매 프레임 부르므로 컴포넌트는 한 번만 찾아 둔다.
+        if (!identityCached)
         {
-            if (target != null)
-                prompt = "[좌클릭] " + target.GetPrompt();
-        }
-        else
-        {
-            prompt = "[좌클릭] 휘두르기   [G] 내려놓기";
-            if (target != null && !(target is Weapon))
-                prompt = "[우클릭] " + target.GetPrompt() + "\n" + prompt;
+            identity = GetComponent<Mirror.NetworkIdentity>();
+            identityCached = true;
         }
 
-        if (prompt != null)
-            GUI.Label(new Rect(cx - 250f, cy + 28f, 500f, 48f), prompt, style);
+        return identity == null || identity.isLocalPlayer;
     }
 
     public void SetInputEnabled(bool enabled)
     {
         inputEnabled = enabled;
         if (!enabled)
+        {
             target = null;
+            if (IsLocalView())
+            {
+                GameHud hud = GameHud.Current;
+                if (hud != null)
+                {
+                    hud.SetCrosshair(false);
+                    hud.SetPrompt(string.Empty);
+                }
+            }
+        }
     }
 }

@@ -127,28 +127,50 @@ public static class JalnanFontAssetBuilder
     [MenuItem("Tools/Fonts/Set Jalnan2 SDF as TMP Default")]
     public static void SetAsTmpDefault()
     {
-        var fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(OutputPath);
+        if (!ApplyAsTmpDefault(out string problem))
+        {
+            Debug.LogError("[JalnanFont] " + problem);
+            return;
+        }
+
+        Debug.Log("[JalnanFont] TMP 기본 폰트를 Jalnan2 SDF로 지정했다.");
+    }
+
+    /// <summary>
+    /// TMP 기본 폰트를 Jalnan2 SDF로 맞춘다. 맵 빌더들이 조용히 호출한다.
+    ///
+    /// 런타임에 만드는 글자(HUD·클립보드·그릴 표시)는 이 기본 폰트를 쓴다.
+    /// 지정이 안 되어 있으면 LiberationSans로 떨어져 한글이 전부 네모로 나온다.
+    /// </summary>
+    public static bool ApplyAsTmpDefault(out string problem)
+    {
+        problem = null;
+
+        TMP_FontAsset fontAsset = Ensure();
         if (fontAsset == null)
         {
-            Debug.LogError("[JalnanFont] Jalnan2 SDF가 없다. 먼저 Create Jalnan2 TMP Font Asset을 실행.");
-            return;
+            problem = "Jalnan2 SDF를 만들지 못했다. 'Tools > Fonts > Create Jalnan2 TMP Font Asset'을 먼저 실행.";
+            return false;
         }
 
         var tmpSettings = AssetDatabase.LoadAssetAtPath<TMP_Settings>("Assets/TextMesh Pro/Resources/TMP Settings.asset");
         if (tmpSettings == null)
         {
-            Debug.LogError("[JalnanFont] TMP Settings.asset을 찾을 수 없다.");
-            return;
+            problem = "TMP Settings.asset을 찾을 수 없다.";
+            return false;
         }
 
         var so = new SerializedObject(tmpSettings);
-        so.FindProperty("m_defaultFontAsset").objectReferenceValue = fontAsset;
+        SerializedProperty prop = so.FindProperty("m_defaultFontAsset");
+        if (prop.objectReferenceValue == fontAsset)
+            return true; // 이미 지정되어 있다
+
+        prop.objectReferenceValue = fontAsset;
         so.ApplyModifiedProperties();
 
         EditorUtility.SetDirty(tmpSettings);
         AssetDatabase.SaveAssets();
-
-        Debug.Log("[JalnanFont] TMP 기본 폰트를 Jalnan2 SDF로 지정했다.", tmpSettings);
+        return true;
     }
 }
 #endif

@@ -12,14 +12,8 @@ EditorBuildSettings:
     path: Assets/Scenes/Lobby.unity
     guid: d932da78db0f98f49b96ab4d99acb188
   - enabled: 1
-    path: Assets/Scenes/NetworkDemo.unity
-    guid: 3c3bd99c01473f64bab7274a4ea0ae65
-  - enabled: 1
     path: Assets/Scenes/Stage2_Campground.unity
     guid: f8a2fe4889734ff499d8c149099073cc
-  - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

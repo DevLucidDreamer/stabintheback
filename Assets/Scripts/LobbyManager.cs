@@ -51,9 +51,27 @@ public class LobbyManager : NetworkBehaviour
     private bool optionsOpen;
 
     /// <summary>이 클라이언트가 방을 연 사람인지. 옵션을 만질 수 있는 사람은 호스트뿐이다.</summary>
-    private static bool IsHost => NetworkServer.active;
+    public static bool IsHost => NetworkServer.active;
 
-    private void Awake() => Instance = this;
+    // ---- UI가 읽는 값 ------------------------------------------------------
+
+    public int PlayerCount => playerCount;
+    public int ReadyCount => readyCount;
+    public int TargetPlayers => targetPlayers;
+    public int MinPlayers => minPlayers;
+    public int MaxPlayers => maxPlayers;
+
+    /// <summary>출발까지 남은 초. 카운트다운 중이 아니면 -1.</summary>
+    public int CountdownSecondsLeft
+        => countdownEndsAt < 0d ? -1 : Mathf.Max(0, Mathf.CeilToInt((float)(countdownEndsAt - NetworkTime.time)));
+
+    private LobbyHud hud;
+
+    private void Awake()
+    {
+        Instance = this;
+        hud = GetComponent<LobbyHud>();
+    }
 
     private void OnDestroy()
     {
@@ -125,9 +143,15 @@ public class LobbyManager : NetworkBehaviour
         SetOptionsOpen(!optionsOpen);
     }
 
+    /// <summary>옵션 창의 '닫기' 버튼이 호출한다.</summary>
+    public void CloseOptions() => SetOptionsOpen(false);
+
     private void SetOptionsOpen(bool open)
     {
         optionsOpen = open;
+
+        if (hud != null)
+            hud.SetOptionsVisible(open);
 
         // 창이 열려 있는 동안은 조작만 멈추고 커서를 풀어 버튼을 누를 수 있게 한다.
         // SetInputEnabled가 아니라 SetInputPaused여야 한다 — 조작을 통째로 끄면
@@ -157,7 +181,7 @@ public class LobbyManager : NetworkBehaviour
     /// 옵션 창은 IsHost(=서버 실행 중)일 때만 열리므로 여기서는 늘 서버 위에서 돌고,
     /// 클라이언트가 정원을 바꿀 경로 자체가 없다. 그래도 한 번 더 확인한다.
     /// </summary>
-    private void RequestTargetPlayers(int value)
+    public void RequestTargetPlayers(int value)
     {
         if (!NetworkServer.active)
             return;
@@ -250,7 +274,7 @@ public class LobbyManager : NetworkBehaviour
     /// 화면에 표시할 방 코드. 타이틀에서 넘어왔으면 그 값을, 대기실 씬을 직접 열어
     /// 호스트를 시작했으면 이 PC의 주소로 만들어 보여준다.
     /// </summary>
-    private string RoomCodeText()
+    public string RoomCodeText()
     {
         if (!string.IsNullOrEmpty(GameLaunch.Code))
             return GameLaunch.Code;
@@ -259,124 +283,5 @@ public class LobbyManager : NetworkBehaviour
             cachedCode = RoomCode.FromAddress(RoomCode.LocalAddress());
 
         return cachedCode;
-    }
-
-    private void OnGUI()
-    {
-        var title = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 26,
-            fontStyle = FontStyle.Bold,
-        };
-        title.normal.textColor = new Color(1f, 0.88f, 0.5f);
-
-        var body = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 18,
-        };
-        body.normal.textColor = new Color(0.92f, 0.92f, 0.95f);
-
-        // 대기실 정보: 왼쪽 위에 방 코드, 오른쪽 위에 인원 (친구를 부르는 데 쓰는 정보)
-        var corner = new GUIStyle(GUI.skin.label)
-        {
-            fontSize = 22,
-            fontStyle = FontStyle.Bold,
-        };
-        corner.normal.textColor = new Color(0.95f, 0.95f, 0.97f);
-
-        string code = RoomCodeText();
-        if (!string.IsNullOrEmpty(code))
-            GUI.Label(new Rect(20f, 16f, 460f, 30f), "Code : " + code, corner);
-
-        corner.alignment = TextAnchor.UpperRight;
-        GUI.Label(new Rect(Screen.width - 240f, 16f, 220f, 30f), $"Member {playerCount}/{targetPlayers}", corner);
-
-        // 남은 카운트다운이 있으면 화면 가운데 위쪽에 크게.
-        if (countdownEndsAt >= 0d)
-        {
-            int left = Mathf.Max(0, Mathf.CeilToInt((float)(countdownEndsAt - NetworkTime.time)));
-            GUI.Label(new Rect(0f, Screen.height * 0.14f, Screen.width, 40f), $"출발까지 {left}", title);
-        }
-        else
-        {
-            int missing = Mathf.Max(0, targetPlayers - playerCount);
-            if (missing > 0)
-                GUI.Label(new Rect(0f, Screen.height * 0.14f, Screen.width, 40f), $"{missing}명 더 모이면 출발", body);
-        }
-
-        GUI.Label(new Rect(0f, Screen.height - 92f, Screen.width, 32f), $"준비  {readyCount} / {playerCount}", title);
-        GUI.Label(new Rect(0f, Screen.height - 60f, Screen.width, 26f),
-            $"정원 {targetPlayers}명이 다 모이면 출발합니다", body);
-
-        if (IsHost)
-        {
-            var hint = new GUIStyle(body) { fontSize = 15 };
-            hint.normal.textColor = new Color(0.75f, 0.78f, 0.85f);
-            GUI.Label(new Rect(0f, Screen.height - 32f, Screen.width, 24f),
-                $"[{optionsKey}] 방 옵션 (호스트 전용)", hint);
-        }
-
-        if (optionsOpen)
-            DrawOptionsPanel();
-    }
-
-    /// <summary>호스트만 보는 방 옵션 창.</summary>
-    private void DrawOptionsPanel()
-    {
-        const float w = 420f, h = 230f;
-        var rect = new Rect((Screen.width - w) * 0.5f, (Screen.height - h) * 0.5f, w, h);
-
-        GUI.Box(rect, GUIContent.none);
-
-        var header = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 22,
-            fontStyle = FontStyle.Bold,
-        };
-        header.normal.textColor = new Color(1f, 0.88f, 0.5f);
-
-        var label = new GUIStyle(GUI.skin.label) { fontSize = 17 };
-        label.normal.textColor = new Color(0.93f, 0.93f, 0.96f);
-
-        var value = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 24,
-            fontStyle = FontStyle.Bold,
-        };
-        value.normal.textColor = Color.white;
-
-        GUI.Label(new Rect(rect.x, rect.y + 14f, w, 30f), "방 옵션", header);
-
-        GUI.Label(new Rect(rect.x + 30f, rect.y + 68f, 160f, 28f), "정원 (명)", label);
-
-        // 정원 조절. 이미 들어와 있는 인원보다 적게는 내릴 수 없다.
-        int lowest = Mathf.Max(minPlayers, playerCount);
-        bool canDecrease = targetPlayers > lowest;
-        bool canIncrease = targetPlayers < maxPlayers;
-
-        GUI.enabled = canDecrease;
-        if (GUI.Button(new Rect(rect.x + 210f, rect.y + 62f, 40f, 40f), "-"))
-            RequestTargetPlayers(targetPlayers - 1);
-
-        GUI.enabled = true;
-        GUI.Label(new Rect(rect.x + 250f, rect.y + 62f, 80f, 40f), targetPlayers.ToString(), value);
-
-        GUI.enabled = canIncrease;
-        if (GUI.Button(new Rect(rect.x + 330f, rect.y + 62f, 40f, 40f), "+"))
-            RequestTargetPlayers(targetPlayers + 1);
-        GUI.enabled = true;
-
-        var note = new GUIStyle(label) { fontSize = 14, wordWrap = true };
-        note.normal.textColor = new Color(0.75f, 0.78f, 0.85f);
-        GUI.Label(new Rect(rect.x + 30f, rect.y + 112f, w - 60f, 46f),
-            $"{targetPlayers}명이 모이면 자동으로 {firstStageScene} 로 출발합니다.\n" +
-            $"(조절 범위 {minPlayers}~{maxPlayers}명, 현재 접속 {playerCount}명)", note);
-
-        if (GUI.Button(new Rect(rect.x + (w - 140f) * 0.5f, rect.y + h - 56f, 140f, 36f), "닫기"))
-            SetOptionsOpen(false);
     }
 }

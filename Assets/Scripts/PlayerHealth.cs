@@ -17,7 +17,6 @@ public class PlayerHealth : NetworkBehaviour
     private CharacterController controller;
     private PlayerRagdoll ragdoll;
     private float invulnUntil;      // 서버 기준 무적 종료 시각
-    private float respawnMsgUntil;  // 로컬 UI 표시 종료 시각
 
     private void Awake()
     {
@@ -80,21 +79,7 @@ public class PlayerHealth : NetworkBehaviour
             transform.position = pos;
         }
 
-        respawnMsgUntil = Time.time + 1.5f;
-    }
-
-    private void OnGUI()
-    {
-        if (!isLocalPlayer || Time.time >= respawnMsgUntil)
-            return;
-
-        var style = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 30,
-            fontStyle = FontStyle.Bold,
-        };
-        style.normal.textColor = new Color(1f, 0.25f, 0.25f);
-        GUI.Label(new Rect(0f, Screen.height * 0.38f, Screen.width, 44f), "당했다!  리스폰", style);
+        if (isLocalPlayer)
+            GameHud.Ensure().ShowToast("당했다!  리스폰", 1.8f, new Color(1f, 0.3f, 0.28f));
     }
 }

@@ -2,9 +2,12 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// 탈출 지점 (Phase 6). 메인 문 밖에 놓인 트리거.
-/// 준비물 체크리스트를 모두 완료한 상태에서 플레이어가 들어오면 다음 스테이지로 전환한다.
-/// 미완료면 그 플레이어에게 안내만 표시한다. 씬 전환은 서버 권한으로만 수행.
+/// 탈출 지점. 맵 밖으로 나가는 길목에 놓인 트리거.
+/// 한 판의 목표를 끝낸 상태에서 플레이어가 들어오면 다음 씬으로 전환한다.
+/// 아직이면 그 플레이어에게만 안내를 띄운다. 씬 전환은 서버 권한으로만 수행.
+///
+/// 캠핑장은 바베큐를 다 구우면 <see cref="CampGameManager"/>가 알아서 대기실로 돌려보내므로
+/// 이 컴포넌트를 두지 않는다. 목표가 다른 스테이지를 붙일 때 쓰는 범용 부품이다.
 /// </summary>
 [RequireComponent(typeof(NetworkIdentity))]
 public class EscapeZone : NetworkBehaviour
@@ -16,10 +19,9 @@ public class EscapeZone : NetworkBehaviour
     [SerializeField] private bool loopToStartIfEmpty = true;
 
     [Tooltip("루프 시 돌아갈 시작 씬")]
-    [SerializeField] private string startSceneName = "NetworkDemo";
+    [SerializeField] private string startSceneName = "Lobby";
 
     private bool serverTransitioning;
-    private float localMsgUntil;
 
     private void OnTriggerEnter(Collider other)
     {
@@ -28,21 +30,23 @@ public class EscapeZone : NetworkBehaviour
         if (id == null || !id.isLocalPlayer)
             return;
 
-        var checklist = CampChecklistManager.Instance;
-        if (checklist != null && checklist.IsComplete())
+        if (GoalReached())
             CmdTryEscape();
         else
-            localMsgUntil = Time.time + 2.5f; // 아직 준비물이 남음
+            GameHud.Ensure().ShowToast("아직 할 일이 남았다!", 2.5f, new Color(1f, 0.85f, 0.3f));
+    }
+
+    /// <summary>한 판의 목표가 끝났는가. 캠핑장이면 바베큐까지 완성된 상태.</summary>
+    private static bool GoalReached()
+    {
+        CampGameManager game = CampGameManager.Instance;
+        return game == null || game.Phase == CampPhase.Feast;
     }
 
     [Command(requiresAuthority = false)]
     private void CmdTryEscape()
     {
-        if (serverTransitioning)
-            return;
-
-        var checklist = CampChecklistManager.Instance;
-        if (checklist == null || !checklist.IsComplete())
+        if (serverTransitioning || !GoalReached())
             return;
 
         string target = nextSceneName;
@@ -53,20 +57,5 @@ public class EscapeZone : NetworkBehaviour
 
         serverTransitioning = true;
         NetworkManager.singleton.ServerChangeScene(target);
-    }
-
-    private void OnGUI()
-    {
-        if (Time.time >= localMsgUntil)
-            return;
-
-        var style = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 22,
-            fontStyle = FontStyle.Bold,
-        };
-        style.normal.textColor = new Color(1f, 0.85f, 0.3f);
-        GUI.Label(new Rect(0f, Screen.height * 0.62f, Screen.width, 32f), "준비물을 모두 챙겨야 나갈 수 있다!", style);
     }
 }

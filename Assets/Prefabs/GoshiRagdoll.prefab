@@ -140,7 +140,7 @@ Transform:
   m_GameObject: {fileID: 1766065757843593052}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.000000057457303, y: 0.1476012, z: 0.009397573}
+  m_LocalPosition: {x: 0.0001604208, y: 0.1476012, z: -0.004129255}
   m_LocalScale: {x: 0.4819868, y: 0.4819868, z: 0.4819868}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -205,7 +205,7 @@ CapsuleCollider:
   m_Radius: 0.0029452501
   m_Height: 0.01051875
   m_Direction: 1
-  m_Center: {x: -2.761952e-16, y: 0.005259376, z: 9.313226e-10}
+  m_Center: {x: 2.2204466e-16, y: 0.005259376, z: 9.313226e-10}
 --- !u!54 &2007706529117674338
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -336,8 +336,8 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 4874126678125670354, guid: 75092788616a7a147b08a95d9b773319, type: 3}
-  - {fileID: -6922793697723135513, guid: 75092788616a7a147b08a95d9b773319, type: 3}
+  - {fileID: 4874126678125670354, guid: 068f637c9cf022b4398f3e1d4e0c61c7, type: 3}
+  - {fileID: -6922793697723135513, guid: 068f637c9cf022b4398f3e1d4e0c61c7, type: 3}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -364,7 +364,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: 4711208715938537054, guid: 75092788616a7a147b08a95d9b773319, type: 3}
+  m_Mesh: {fileID: 4711208715938537054, guid: 068f637c9cf022b4398f3e1d4e0c61c7, type: 3}
   m_Bones:
   - {fileID: 1569002459752206720}
   - {fileID: 6567787549894294096}
@@ -374,8 +374,8 @@ SkinnedMeshRenderer:
   m_BlendShapeWeights: []
   m_RootBone: {fileID: 1569002459752206720}
   m_AABB:
-    m_Center: {x: -9.313226e-10, y: 0.009744505, z: -0.00018665893}
-    m_Extent: {x: 0.011196197, y: 0.02337367, z: 0.0095346365}
+    m_Center: {x: -0.0000037499703, y: 0.009744505, z: 0.00012951344}
+    m_Extent: {x: 0.011563249, y: 0.02337367, z: 0.010176955}
   m_DirtyAABB: 0
 --- !u!1 &4351606674880069011
 GameObject:
@@ -433,7 +433,7 @@ CapsuleCollider:
   m_Radius: 0.0027999985
   m_Height: 0.009999995
   m_Direction: 1
-  m_Center: {x: -1.3809762e-16, y: 0.0049999985, z: 0}
+  m_Center: {x: 1.1102232e-16, y: 0.0049999985, z: 0}
 --- !u!54 &2602665266815017431
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -518,7 +518,7 @@ CapsuleCollider:
   m_Radius: 0.0030784507
   m_Height: 0.010994466
   m_Direction: 1
-  m_Center: {x: -2.810252e-16, y: 0.005497234, z: -3.0377123e-10}
+  m_Center: {x: -8.41098e-14, y: 0.005497234, z: -3.0377123e-10}
 --- !u!54 &3925429931871619208
 Rigidbody:
   m_ObjectHideFlags: 0

@@ -18,7 +18,7 @@ public static class BuilderText
     public static readonly Color SignInk = new Color(0.13f, 0.10f, 0.07f);
 
     /// <summary>
-    /// 월드에 놓이는 3D 글자를 만든다.
+    /// 월드에 놓이는 3D 글자를 만든다. 부모의 <b>+Z 쪽에서</b> 읽힌다.
     /// </summary>
     /// <param name="size">글자가 들어갈 판의 크기(가로, 세로). 이 안에 맞춰 자동 축소된다.</param>
     public static TextMeshPro World(Transform parent, string name, Vector3 localPos, string text,
@@ -29,6 +29,11 @@ public static class BuilderText
         var go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         go.transform.localPosition = localPos;
+
+        // Y축으로 180도 돌린다. TMP 글자는 자기 +Z가 보는 사람 <b>반대쪽</b>을 향할 때 바로 읽힌다
+        // (기본 카메라가 +Z를 바라보며 원점의 글자를 읽는 것과 같은 배치).
+        // 팻말 글자는 판의 +Z 면에 붙여 +Z 쪽에서 읽으므로, 돌려놓지 않으면 좌우가 뒤집혀 보인다.
+        go.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
 
         var rt = go.GetComponent<RectTransform>();
         rt.sizeDelta = size;

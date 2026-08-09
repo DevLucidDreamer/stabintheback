@@ -20,7 +20,6 @@ public class LobbyAltar : MonoBehaviour
     [SerializeField] private string pickedUpText = "냉동참치를 손에 넣었다!";
     [SerializeField] private float announceSeconds = 2.4f;
 
-    private float announceUntil;
     private float announceReadyAt; // 접속 직후 상태 동기화로 뜨는 오인 문구 방지
 
     /// <summary>빌더가 참조를 연결한다.</summary>
@@ -40,7 +39,7 @@ public class LobbyAltar : MonoBehaviour
         if (Time.time < announceReadyAt || !PickedUpByMe(weapon))
             return;
 
-        announceUntil = Time.time + announceSeconds;
+        GameHud.Ensure().ShowToast(pickedUpText, announceSeconds, new Color(1f, 0.82f, 0.25f));
     }
 
     /// <summary>
@@ -54,21 +53,5 @@ public class LobbyAltar : MonoBehaviour
             return false;
 
         return weapon.transform.IsChildOf(me.transform);
-    }
-
-    private void OnGUI()
-    {
-        if (Time.time >= announceUntil)
-            return;
-
-        var style = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 44,
-            fontStyle = FontStyle.Bold,
-        };
-        style.normal.textColor = new Color(1f, 0.82f, 0.25f);
-
-        GUI.Label(new Rect(0f, Screen.height * 0.26f, Screen.width, 60f), pickedUpText, style);
     }
 }
