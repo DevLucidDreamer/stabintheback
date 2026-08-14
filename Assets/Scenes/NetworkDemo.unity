@@ -1853,7 +1853,10 @@ MonoBehaviour:
   displayName: "\uAD6D\uC790"
   holdPosition: {x: 0, y: -0.08, z: -0.1}
   holdEuler: {x: -70, y: 0, z: 0}
+  swingReach: 1.4
+  swingRadius: 1
   groundClearance: 0.03
+  groundOffset: 0.05
   weaponId: 1
 --- !u!1 &153174959
 GameObject:
@@ -8714,7 +8717,10 @@ MonoBehaviour:
   displayName: "\uB0C9\uB3D9\uCC38\uCE58"
   holdPosition: {x: 0, y: -0.05, z: -0.05}
   holdEuler: {x: -75, y: 0, z: 0}
+  swingReach: 1.4
+  swingRadius: 1
   groundClearance: 0.03
+  groundOffset: 0.05
   weaponId: 0
 --- !u!1 &770474541
 GameObject:
@@ -9041,6 +9047,7 @@ GameObject:
   - component: {fileID: 801558453}
   - component: {fileID: 801558452}
   - component: {fileID: 801558451}
+  - component: {fileID: 801558456}
   m_Layer: 0
   m_Name: NetworkBootstrap
   m_TagString: Untagged
@@ -9160,6 +9167,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &801558456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 801558450}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f58442f5bb24655459d8528d4e9989d6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LanRoomAdvertiser
+  lobbyScene: Lobby
 --- !u!1 &808320986
 GameObject:
   m_ObjectHideFlags: 0

@@ -34,7 +34,8 @@ public class PlayerController : MonoBehaviour
     private CharacterController controller;
     private float pitch;            // 카메라 상하 회전 누적값(도)
     private float verticalVelocity; // 중력/점프에 의한 수직 속도
-    private bool inputEnabled = true;
+    private bool inputEnabled = true; // 이 캐릭터를 내가 조종하는가 (원격 아바타면 false)
+    private bool inputPaused;         // UI가 열려 잠시 조작만 멈춘 상태 (중력은 계속 돈다)
 
     public float Pitch => pitch;
     public Transform CameraTransform => cameraTransform;
@@ -69,13 +70,20 @@ public class PlayerController : MonoBehaviour
         if (!inputEnabled)
             return;
 
-        // Esc로 커서를 풀고, 게임 화면을 클릭하면 다시 잠근다. (에디터에서 편리)
-        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            LockCursor(false);
-        else if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
-            LockCursor(true);
+        if (!inputPaused)
+        {
+            // Esc로 커서를 풀고, 게임 화면을 클릭하면 다시 잠근다. (에디터에서 편리)
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+                LockCursor(false);
+            else if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
+                LockCursor(true);
 
-        LookAround();
+            LookAround();
+        }
+
+        // 창이 열려 있어도 Move는 계속 부른다.
+        // CharacterController는 Move를 부르지 않으면 접지 판정도 멈춰 버려서,
+        // 조작을 통째로 끄면 캐릭터가 바닥을 뚫고 가라앉는다.
         Move();
     }
 
@@ -113,7 +121,7 @@ public class PlayerController : MonoBehaviour
             if (verticalVelocity < 0f)
                 verticalVelocity = -2f;
 
-            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+            if (!inputPaused && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
                 verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
@@ -127,7 +135,7 @@ public class PlayerController : MonoBehaviour
     private Vector2 ReadMoveInput()
     {
         Keyboard kb = Keyboard.current;
-        if (kb == null)
+        if (kb == null || inputPaused)
             return Vector2.zero;
 
         float x = 0f;
@@ -172,6 +180,17 @@ public class PlayerController : MonoBehaviour
         inputEnabled = enabled;
         if (isActiveAndEnabled)
             LockCursor(enabled);
+    }
+
+    /// <summary>
+    /// 메뉴/옵션 창이 열려 있는 동안 조작만 멈춘다.
+    /// SetInputEnabled(false)와 달리 중력·접지는 계속 처리되므로 캐릭터가 가라앉지 않는다.
+    /// </summary>
+    public void SetInputPaused(bool paused)
+    {
+        inputPaused = paused;
+        if (inputEnabled && isActiveAndEnabled)
+            LockCursor(!paused);
     }
 
     public void SetRemotePitch(float remotePitch)

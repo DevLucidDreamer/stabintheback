@@ -1,90 +1,57 @@
+using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// 대기실 중앙의 참치 제단 연출.
-/// 식탁 위 냉동참치를 누군가 집으면 "마검을 뽑았다!" 문구를 띄우고 제단 조명을 끈다.
-/// 다시 내려놓으면 원래대로 돌아온다.
+/// 대기실 식탁 위 냉동참치를 <b>내가</b> 집었을 때 나에게만 짧게 알려 준다.
 ///
-/// 소지 상태는 WeaponNetworkManager가 이미 모든 클라이언트에 동기화해 주므로,
-/// 여기서는 그 결과(Weapon.OnHeldChanged)에만 반응하는 로컬 연출이다.
+/// 이 게임은 서로 속이는 배신 구도라, 누가 무기를 가져갔는지가 남에게 새면 안 된다.
+/// 그래서 제단 조명을 끄거나 팻말 문구를 바꾸는 식의 "모두가 보는 신호"는 두지 않는다
+/// (Weapon.OnHeldChanged는 모든 클라이언트에서 울리므로, 그대로 반응하면 전부에게 알려진다).
+/// 집은 사람 본인에게만 보이도록 로컬 플레이어인지 확인한 뒤에만 문구를 띄운다.
+///
+/// 무기는 하나뿐인 물건이 아니다. 여기 놓인 참치는 대기실에 마련된 것 중 하나일 뿐이다.
 /// </summary>
 public class LobbyAltar : MonoBehaviour
 {
     [Header("연결")]
-    [SerializeField] private Weapon sword;       // 제단 위 냉동참치
-    [SerializeField] private Light altarLight;   // 제단 스포트라이트
-    [SerializeField] private TextMesh sign;      // 제단 팻말
+    [SerializeField] private Weapon sword;       // 식탁 위 냉동참치
 
     [Header("문구")]
-    [SerializeField] private string idleSign = "이 냉동참치가 마검이다";
-    [SerializeField] private string takenSign = "마검을 누가 가져갔다";
+    [SerializeField] private string pickedUpText = "냉동참치를 손에 넣었다!";
     [SerializeField] private float announceSeconds = 2.4f;
 
-    private float announceUntil;
     private float announceReadyAt; // 접속 직후 상태 동기화로 뜨는 오인 문구 방지
-    private bool held;
 
     /// <summary>빌더가 참조를 연결한다.</summary>
-    public void Configure(Weapon swordWeapon, Light light, TextMesh signText)
-    {
-        sword = swordWeapon;
-        altarLight = light;
-        sign = signText;
-    }
+    public void Configure(Weapon swordWeapon) => sword = swordWeapon;
 
     private void OnEnable() => Weapon.OnHeldChanged += HandleHeldChanged;
 
     private void OnDisable() => Weapon.OnHeldChanged -= HandleHeldChanged;
 
-    private void Start()
-    {
-        announceReadyAt = Time.time + 2f;
-        Apply(false);
-    }
+    private void Start() => announceReadyAt = Time.time + 2f;
 
     private void HandleHeldChanged(Weapon weapon, bool isHeld)
     {
-        if (weapon == null || weapon != sword || isHeld == held)
+        if (!isHeld || weapon == null || weapon != sword)
             return;
 
-        Apply(isHeld);
-
-        if (isHeld && Time.time >= announceReadyAt)
-            announceUntil = Time.time + announceSeconds;
-    }
-
-    private void Apply(bool isHeld)
-    {
-        held = isHeld;
-
-        if (altarLight != null)
-            altarLight.enabled = !isHeld;
-
-        if (sign != null)
-            sign.text = isHeld ? takenSign : idleSign;
-    }
-
-    private void OnGUI()
-    {
-        if (Time.time >= announceUntil)
+        if (Time.time < announceReadyAt || !PickedUpByMe(weapon))
             return;
 
-        var big = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 44,
-            fontStyle = FontStyle.Bold,
-        };
-        big.normal.textColor = new Color(1f, 0.82f, 0.25f);
+        GameHud.Ensure().ShowToast(pickedUpText, announceSeconds, new Color(1f, 0.82f, 0.25f));
+    }
 
-        var small = new GUIStyle(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = 20,
-        };
-        small.normal.textColor = new Color(0.95f, 0.95f, 0.95f);
+    /// <summary>
+    /// 집은 사람이 나인지. 무기는 집은 사람의 손 소켓 밑으로 들어가므로,
+    /// 로컬 플레이어 계층 안에 있으면 내가 집은 것이다.
+    /// </summary>
+    private static bool PickedUpByMe(Weapon weapon)
+    {
+        NetworkIdentity me = NetworkClient.localPlayer;
+        if (me == null)
+            return false;
 
-        GUI.Label(new Rect(0f, Screen.height * 0.26f, Screen.width, 60f), "마검을 뽑았다!", big);
-        GUI.Label(new Rect(0f, Screen.height * 0.26f + 62f, Screen.width, 30f), "등 뒤를 조심하세요.", small);
+        return weapon.transform.IsChildOf(me.transform);
     }
 }

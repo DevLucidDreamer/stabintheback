@@ -1,40 +1,45 @@
 using UnityEngine;
 
 /// <summary>
-/// 챙길 수 있는 캠핑 준비물. 클릭하면 체크리스트에 반영되고 씬에서 사라진다.
-/// 멀티플레이에서는 각 아이템에 부여된 고유 ID로 CampChecklistManager가 서버 권한 처리한다.
-/// (아이템 자체에는 NetworkIdentity를 붙이지 않는다 — 서랍/냉장고 자식이라 중첩 불가)
+/// 캠핑장에 흩어져 있는 재료. 조준하고 좌클릭하면 팀 공용 재고에 들어가고 씬에서 사라진다.
+///
+/// 재료는 개인이 들고 다니지 않는다. 아무나 주우면 모두의 재고가 되고,
+/// 화로와 그릴은 그 공용 재고에서 꺼내 쓴다 — 흩어져서 뒤지는 편이 항상 이득이 되게 하려는 것.
+///
+/// 멀티플레이 동기화는 고유 ID로 CampGameManager가 서버 권한 처리한다.
+/// (아이템 자체에는 NetworkIdentity를 붙이지 않는다 — 쿨러/텐트 자식이라 중첩 불가)
 /// </summary>
 public class CollectibleItem : Interactable
 {
-    [Tooltip("멀티플레이 동기화용 고유 ID. Phase 3 셋업 메뉴가 자동 부여한다")]
+    [Tooltip("이 재료가 무엇인지. 장작은 화로 연료, 고기·야채는 그릴에 굽는다")]
+    [SerializeField] private Ingredient kind = Ingredient.Firewood;
+
+    [Tooltip("멀티플레이 동기화용 고유 ID. 캠핑장 빌더가 자동 부여한다")]
     [SerializeField] private int itemId = -1;
 
+    public Ingredient Kind => kind;
     public int ItemId => itemId;
 
-    /// <summary>에디터 셋업에서 ID를 부여할 때 사용.</summary>
+    /// <summary>에디터 셋업에서 값을 넣을 때 사용.</summary>
     public void SetItemId(int id) => itemId = id;
+
+    public void SetKind(Ingredient value) => kind = value;
 
     public override string GetPrompt() => DisplayName + " 챙기기";
 
     public override void Interact(PlayerInteraction player)
     {
-        var manager = CampChecklistManager.Instance;
-        if (manager != null)
+        CampGameManager game = CampGameManager.Instance;
+        if (game == null)
         {
-            // 멀티플레이: 서버에 획득 요청(숨김/체크는 서버 브로드캐스트가 처리). 로컬 피드백만 즉시.
-            player.GetComponent<ItemChecklist>()?.Peek();
-            manager.RequestCollect(itemId);
+            // 매니저가 없는 씬(대기실 등)에서는 그냥 사라지기만 한다.
+            gameObject.SetActive(false);
             return;
         }
 
-        // 싱글플레이: 로컬 체크리스트에 반영하고 비활성화.
-        var checklist = player.GetComponent<ItemChecklist>();
-        if (checklist == null)
-            checklist = Object.FindFirstObjectByType<ItemChecklist>();
-        if (checklist != null)
-            checklist.Collect(DisplayName);
+        if (!game.IsGathering)
+            return; // 노을이 진 뒤에는 더 줍지 않는다
 
-        gameObject.SetActive(false);
+        game.RequestCollect(itemId);
     }
 }

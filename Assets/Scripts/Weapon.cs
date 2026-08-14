@@ -21,9 +21,20 @@ public class Weapon : Interactable
     [Tooltip("들었을 때 손 소켓 기준 회전(오일러 각)")]
     public Vector3 holdEuler = Vector3.zero;
 
+    [Header("휘두르기 성능")]
+    [Tooltip("이 무기를 휘둘렀을 때 닿는 앞쪽 거리 (m). 당근 대검처럼 긴 무기는 멀리 닿는다")]
+    public float swingReach = 1.4f;
+
+    [Tooltip("타격 판정 반경 (m). 참치처럼 뭉툭한 무기는 넓게 맞는다")]
+    public float swingRadius = 1.0f;
+
     [Header("내려놓기")]
     [Tooltip("물리 없이 내려놓을 때(멀티플레이) 바닥 위에 살짝 띄우는 간격 (m)")]
     public float groundClearance = 0.03f;
+
+    [Tooltip("이 오브젝트의 원점(손잡이)에서 모델 맨 아래까지의 거리 (m). " +
+             "원점이 손잡이라서, 이만큼 띄워야 바닥에 묻히지 않는다")]
+    public float groundOffset = 0.05f;
 
     [Header("네트워크")]
     [Tooltip("멀티플레이 동기화용 고유 ID. Phase 4 셋업 메뉴가 부여한다")]
@@ -66,7 +77,7 @@ public class Weapon : Interactable
         if (!addPhysics &&
             Physics.Raycast(worldPos + Vector3.up * 0.3f, Vector3.down, out RaycastHit hit, 6f, ~0, QueryTriggerInteraction.Ignore))
         {
-            worldPos = hit.point + Vector3.up * groundClearance;
+            worldPos = hit.point + Vector3.up * (groundClearance + groundOffset);
         }
 
         transform.SetPositionAndRotation(worldPos, worldRot);

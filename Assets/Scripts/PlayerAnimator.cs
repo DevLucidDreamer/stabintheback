@@ -57,6 +57,18 @@ public class PlayerAnimator : MonoBehaviour
         if (animator == null || motionSource == null)
             return;
 
+        // AnimatorController가 안 붙어 있으면 파라미터를 건드릴 때마다
+        // "Animator is not playing an AnimatorController" 에러가 매 프레임 쏟아진다.
+        // 한 번만 알려 주고 스스로 꺼진다 (셋업을 돌리면 정상으로 돌아온다).
+        if (animator.runtimeAnimatorController == null)
+        {
+            Debug.LogWarning(
+                "[PlayerAnimator] AnimatorController가 없어 애니메이션을 끕니다.\n" +
+                "Tools > Player > Setup Player 를 실행해 캐릭터를 다시 셋업하세요.", this);
+            enabled = false;
+            return;
+        }
+
         float dt = Time.deltaTime;
         if (dt <= 0f)
             return;

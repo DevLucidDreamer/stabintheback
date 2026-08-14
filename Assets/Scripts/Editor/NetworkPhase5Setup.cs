@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Phase 5: 마검 전투(원킬·리스폰) 셋업.
+/// Phase 5: 무기 전투(원킬·리스폰) 셋업.
 /// NetworkPlayer 프리팹에 PlayerHealth를 추가한다. (살상 판정은 WeaponNetworkManager가 처리)
 /// </summary>
 public static class NetworkPhase5Setup
@@ -32,7 +32,7 @@ public static class NetworkPhase5Setup
         PrefabUtility.SaveAsPrefabAsset(contents, PlayerPrefabPath);
         PrefabUtility.UnloadPrefabContents(contents);
 
-        Debug.Log("[Phase5] NetworkPlayer 프리팹에 PlayerHealth 추가 완료. 마검을 든 플레이어의 스윙이 원킬이 됩니다.");
+        Debug.Log("[Phase5] NetworkPlayer 프리팹에 PlayerHealth 추가 완료. 무기를 든 플레이어의 스윙이 원킬이 됩니다.");
     }
 }
 #endif

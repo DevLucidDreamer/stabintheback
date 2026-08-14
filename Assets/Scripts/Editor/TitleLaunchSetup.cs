@@ -76,6 +76,10 @@ public static class TitleLaunchSetup
         if (bootstrap.GetComponent<NetworkAutoLaunch>() == null)
             Undo.AddComponent<NetworkAutoLaunch>(bootstrap);
 
+        // --- LanRoomAdvertiser (대기실에서 방을 알려 타이틀의 '빠른 참가'에 잡히게 한다) ---
+        if (bootstrap.GetComponent<LanRoomAdvertiser>() == null)
+            Undo.AddComponent<LanRoomAdvertiser>(bootstrap);
+
         EditorUtility.SetDirty(bootstrap);
         EditorSceneManager.MarkSceneDirty(bootstrap.scene);
         EditorSceneManager.SaveScene(bootstrap.scene);

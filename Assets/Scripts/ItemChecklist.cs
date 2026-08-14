@@ -1,35 +1,36 @@
-using System.Collections.Generic;
 using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// 캠핑 준비물 체크리스트.
-/// - 씬에 있는 모든 CollectibleItem을 시작 시 수집 목록으로 등록
-/// - E키: 화면 왼쪽 아래에서 3D 클립보드를 들어올려 목록 확인 (다시 누르면 내림)
-/// - 아이템을 챙기면 잠깐 클립보드가 올라와 체크된 것을 보여준다
-/// 클립보드는 프리미티브 + TextMesh로 런타임에 생성한다.
+/// 손에 든 캠핑 체크리스트 클립보드.
+///
+/// - E키: 화면 왼쪽 아래에서 클립보드를 들어올려 목록 확인 (다시 누르면 내림)
+/// - 재료를 챙기면 잠깐 올라와 체크된 것을 보여 준다
+///
+/// 화면 구석의 요약은 HUD(<see cref="CampHud"/>)가 늘 띄우고 있고,
+/// 이 클립보드는 "직접 들여다보는" 맛을 위한 물건이다.
+/// 글자는 TMP라 한글이 또렷하게 나온다.
 /// </summary>
 public class ItemChecklist : MonoBehaviour
 {
     [Header("클립보드 연출")]
     [Tooltip("올리고 내리는 데 걸리는 시간(초)")]
     [SerializeField] private float animTime = 0.22f;
-    [Tooltip("아이템을 챙겼을 때 자동으로 보여주는 시간(초)")]
-    [SerializeField] private float peekDuration = 1.6f;
 
-    // 아이템 이름 → 필요 개수 / 챙긴 개수
-    private readonly List<string> order = new List<string>();
-    private readonly Dictionary<string, int> required = new Dictionary<string, int>();
-    private readonly Dictionary<string, int> collected = new Dictionary<string, int>();
+    [Tooltip("재료를 챙겼을 때 자동으로 보여주는 시간(초)")]
+    [SerializeField] private float peekDuration = 1.6f;
 
     private Camera cam;
     private Transform clipboard;
-    private TextMesh listText;
+    private TextMeshPro listText;
     private bool shown;       // E키로 고정해서 보는 중인지
     private float t;          // 0 = 내려감, 1 = 올라옴
-    private float peekTimer;  // 아이템 획득 시 잠깐 보여주기
+    private float peekTimer;  // 재료 획득 시 잠깐 보여주기
     private bool inputEnabled = true;
+
+    private readonly StringBuilder sb = new StringBuilder(200);
 
     // 카메라 기준 클립보드 위치/회전 (왼쪽 아래에서 올라오는 연출)
     private static readonly Vector3 ShownPos = new Vector3(-0.22f, -0.16f, 0.5f);
@@ -37,16 +38,9 @@ public class ItemChecklist : MonoBehaviour
     private static readonly Quaternion ShownRot = Quaternion.Euler(-18f, 12f, 4f);
     private static readonly Quaternion HiddenRot = Quaternion.Euler(50f, 12f, 4f);
 
-    private void OnEnable()
-    {
-        // 멀티플레이 공용 진행도가 바뀌면 UI를 갱신한다.
-        CampChecklistManager.OnChanged += RefreshText;
-    }
+    private void OnEnable() => CampGameManager.OnChanged += HandleChanged;
 
-    private void OnDisable()
-    {
-        CampChecklistManager.OnChanged -= RefreshText;
-    }
+    private void OnDisable() => CampGameManager.OnChanged -= HandleChanged;
 
     private void Start()
     {
@@ -54,50 +48,36 @@ public class ItemChecklist : MonoBehaviour
         if (cam != null)
             BuildClipboard();
 
-        // 싱글플레이 폴백용: 씬에 배치된 준비물을 전부 로컬 목록에 등록한다.
-        foreach (var item in Object.FindObjectsByType<CollectibleItem>(FindObjectsSortMode.None))
-            Register(item.DisplayName);
-        order.Sort();
         RefreshText();
     }
 
-    /// <summary>클립보드를 잠깐 올려 보여준다(아이템 획득 피드백).</summary>
+    /// <summary>클립보드를 잠깐 올려 보여준다.</summary>
     public void Peek()
     {
         if (!shown)
             peekTimer = peekDuration;
     }
 
-    private void Register(string itemName)
+    /// <summary>
+    /// 진행 상황이 바뀌면 글자를 고친다.
+    /// 재료를 모으는 동안에만 저절로 들어 올린다 — 굽는 중에는 칸을 올리고 내릴 때마다
+    /// 클립보드가 튀어나와 시야를 가린다.
+    /// </summary>
+    private void HandleChanged()
     {
-        if (!required.ContainsKey(itemName))
-        {
-            required[itemName] = 0;
-            collected[itemName] = 0;
-            order.Add(itemName);
-        }
-        required[itemName]++;
-    }
-
-    /// <summary>아이템을 챙겼을 때 CollectibleItem이 호출한다.</summary>
-    public void Collect(string itemName)
-    {
-        if (!required.ContainsKey(itemName))
-            Register(itemName); // 목록에 없던 아이템 안전 처리
-
-        collected[itemName] = Mathf.Min(collected[itemName] + 1, required[itemName]);
         RefreshText();
 
-        if (!shown)
-            peekTimer = peekDuration; // 잠깐 올려서 체크된 걸 보여준다
+        CampGameManager game = CampGameManager.Instance;
+        if (game == null || game.IsGathering)
+            Peek();
     }
 
     private void Update()
     {
-        if (!inputEnabled || clipboard == null)
+        if (clipboard == null)
             return;
 
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame
+        if (inputEnabled && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame
             && Cursor.lockState == CursorLockMode.Locked)
         {
             shown = !shown;
@@ -107,7 +87,7 @@ public class ItemChecklist : MonoBehaviour
         if (peekTimer > 0f)
             peekTimer -= Time.deltaTime;
 
-        float target = (shown || peekTimer > 0f) ? 1f : 0f;
+        float target = (shown || peekTimer > 0f) && inputEnabled ? 1f : 0f;
         if (!Mathf.Approximately(t, target))
         {
             t = Mathf.MoveTowards(t, target, Time.deltaTime / Mathf.Max(0.01f, animTime));
@@ -121,59 +101,60 @@ public class ItemChecklist : MonoBehaviour
             clipboard.gameObject.SetActive(visible);
     }
 
+    // ---- 글자 -------------------------------------------------------------
+
     private void RefreshText()
     {
         if (listText == null)
             return;
 
-        // 멀티플레이면 서버가 관리하는 공용 진행도를, 아니면 로컬 목록을 렌더한다.
-        var mgr = CampChecklistManager.Instance;
-        listText.text = mgr != null
-            ? BuildText(mgr.Names, mgr.Need, mgr.Have)
-            : BuildLocalText();
-    }
-
-    private string BuildLocalText()
-    {
-        var sb = new StringBuilder("< 캠핑 준비물 >\n\n");
-        if (order.Count == 0)
-            return sb.Append("여기선 챙길 게 없다.\n출발하면 시작된다.").ToString(); // 대기실 등
-
-        bool all = order.Count > 0;
-        foreach (string itemName in order)
+        CampGameManager game = CampGameManager.Instance;
+        if (game == null)
         {
-            bool done = collected[itemName] >= required[itemName];
-            all &= done;
-            sb.Append(done ? "■ " : "□ ").Append(itemName);
-            if (required[itemName] > 1)
-                sb.Append($" ({collected[itemName]}/{required[itemName]})");
-            sb.Append('\n');
+            // 대기실 등 목표가 없는 씬.
+            listText.text = "< 캠핑 준비 >\n\n여기선 챙길 게 없다.\n출발하면 시작된다.";
+            return;
         }
-        if (all)
-            sb.Append("\n출발 준비 완료!");
-        return sb.ToString();
-    }
 
-    private static string BuildText(string[] names, int[] need, int[] have)
-    {
-        var sb = new StringBuilder("< 캠핑 준비물 >\n\n");
-        int n = Mathf.Min(names.Length, Mathf.Min(need.Length, have.Length));
-        bool all = n > 0;
-        for (int i = 0; i < n; i++)
+        sb.Clear();
+
+        if (game.Phase == CampPhase.Gathering || game.Phase == CampPhase.Dusk)
         {
-            bool done = have[i] >= need[i];
-            all &= done;
-            sb.Append(done ? "■ " : "□ ").Append(names[i]);
-            if (need[i] > 1)
-                sb.Append($" ({have[i]}/{need[i]})");
+            sb.Append("< 캠핑 재료 >\n\n");
+            Line("장작", game.FirewoodHave, game.FirewoodNeeded);
+            Line("고기", game.MeatHave, game.MeatNeeded);
+            Line("야채", game.VegetableHave, game.VegetableNeeded);
+
             sb.Append('\n');
+            sb.Append(game.GatheringComplete
+                ? "다 모았다!\n해가 넘어간다."
+                : "해가 지기 전에\n전부 찾아내자.");
         }
-        if (all)
-            sb.Append("\n출발 준비 완료!");
-        return sb.ToString();
+        else
+        {
+            sb.Append("< 바베큐 >\n\n");
+            Line("장작 투입", game.FirewoodLoaded, game.FirewoodNeeded);
+            Line("구운 것", game.CookedCount, game.CookTarget);
+
+            sb.Append('\n');
+            sb.Append(game.FireLit
+                ? $"남은 재료\n고기 {game.MeatAvailable} · 야채 {game.VegetableAvailable}"
+                : "화로에 장작을\n전부 넣어야 한다.");
+        }
+
+        listText.text = sb.ToString();
     }
 
-    // ------------------------------------------------------------ 클립보드 생성
+    private void Line(string label, int have, int need)
+    {
+        sb.Append(have >= need ? "■ " : "□ ")
+          .Append(label)
+          .Append("  ")
+          .Append(have).Append('/').Append(need)
+          .Append('\n');
+    }
+
+    // ---- 클립보드 생성 -----------------------------------------------------
 
     private void BuildClipboard()
     {
@@ -186,23 +167,30 @@ public class ItemChecklist : MonoBehaviour
         Part("Paper", new Vector3(0f, -0.005f, -0.009f), new Vector3(0.26f, 0.37f, 0.004f), new Color(0.96f, 0.95f, 0.90f));
         Part("Clip", new Vector3(0f, 0.19f, -0.014f), new Vector3(0.10f, 0.035f, 0.02f), new Color(0.65f, 0.66f, 0.68f));
 
-        var textGo = new GameObject("ListText");
+        // TMP_Text는 RectTransform이 필요하다. 만들 때 같이 붙여야 한다.
+        var textGo = new GameObject("ListText", typeof(RectTransform));
         textGo.transform.SetParent(clipboard, false);
-        textGo.transform.localPosition = new Vector3(-0.11f, 0.155f, -0.013f);
-        listText = textGo.AddComponent<TextMesh>();
-        listText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        textGo.GetComponent<MeshRenderer>().material = listText.font.material;
-        listText.anchor = TextAnchor.UpperLeft;
-        listText.alignment = TextAlignment.Left;
-        listText.characterSize = 0.0065f;
-        listText.fontSize = 48;
-        listText.lineSpacing = 1.05f;
+        textGo.transform.localPosition = new Vector3(0f, 0f, -0.012f);
+
+        var rt = textGo.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(0.24f, 0.34f);
+
+        listText = textGo.AddComponent<TextMeshPro>();
+        TMP_FontAsset font = GameHud.ResolveFont();
+        if (font != null)
+            listText.font = font;
+
+        listText.alignment = TextAlignmentOptions.TopLeft;
         listText.color = new Color(0.12f, 0.10f, 0.10f);
+        listText.textWrappingMode = TextWrappingModes.Normal;
+        listText.enableAutoSizing = true;
+        listText.fontSizeMin = 0.06f;
+        listText.fontSizeMax = 0.34f;
 
         clipboard.gameObject.SetActive(false);
     }
 
-    /// <summary>클립보드 부품 큐브 하나 생성. 콜라이더는 제거해 상호작용 레이캐스트를 막지 않는다.</summary>
+    /// <summary>클립보드 부품 큐브 하나. 콜라이더는 제거해 상호작용 레이캐스트를 막지 않는다.</summary>
     private void Part(string partName, Vector3 pos, Vector3 size, Color color)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -210,31 +198,20 @@ public class ItemChecklist : MonoBehaviour
         go.transform.SetParent(clipboard, false);
         go.transform.localPosition = pos;
         go.transform.localScale = size;
-        Object.Destroy(go.GetComponent<Collider>());
+        Destroy(go.GetComponent<Collider>());
 
         var mr = go.GetComponent<MeshRenderer>();
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-
         mr.material = PipelineShaders.CreateLit(color);
-    }
-
-    private void OnGUI()
-    {
-        if (!inputEnabled)
-            return;
-
-        if (Cursor.lockState != CursorLockMode.Locked)
-            return;
-
-        var style = new GUIStyle(GUI.skin.label) { fontSize = 14 };
-        style.normal.textColor = new Color(1f, 1f, 1f, 0.75f);
-        GUI.Label(new Rect(16f, Screen.height - 30f, 300f, 24f), "[E] 준비물 목록", style);
     }
 
     public void SetInputEnabled(bool enabled)
     {
         inputEnabled = enabled;
-        if (!enabled && clipboard != null)
-            clipboard.gameObject.SetActive(false);
+        if (!enabled)
+        {
+            shown = false;
+            peekTimer = 0f;
+        }
     }
 }

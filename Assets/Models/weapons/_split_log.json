@@ -1,0 +1,65 @@
+{
+ "written": [
+  {
+   "name": "Frozen_Tuna",
+   "kb": 117.7,
+   "verts": 226,
+   "mats": 5
+  },
+  {
+   "name": "Great_Ladle",
+   "kb": 118.8,
+   "verts": 305,
+   "mats": 3
+  },
+  {
+   "name": "Bread_Shield",
+   "kb": 110.4,
+   "verts": 88,
+   "mats": 2
+  },
+  {
+   "name": "Baguette_Club",
+   "kb": 113.6,
+   "verts": 196,
+   "mats": 2
+  },
+  {
+   "name": "Pineapple_MorningStar",
+   "kb": 117.1,
+   "verts": 211,
+   "mats": 3
+  },
+  {
+   "name": "Sausage_Skewer",
+   "kb": 129.0,
+   "verts": 769,
+   "mats": 3
+  },
+  {
+   "name": "Rubber_Duck",
+   "kb": 119.8,
+   "verts": 307,
+   "mats": 3
+  },
+  {
+   "name": "Whisk_Axe",
+   "kb": 134.9,
+   "verts": 1046,
+   "mats": 3
+  },
+  {
+   "name": "Carrot_Greatsword",
+   "kb": 120.0,
+   "verts": 338,
+   "mats": 4
+  },
+  {
+   "name": "Banana_Bow",
+   "kb": 116.8,
+   "verts": 252,
+   "mats": 3
+  }
+ ],
+ "failed": []
+}
