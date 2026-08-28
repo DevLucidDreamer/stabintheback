@@ -11,12 +11,24 @@ public class NetworkPlayerSetup : NetworkBehaviour
     [SerializeField] private Transform remoteHeadPitch;
     [SerializeField] private float pitchSendThreshold = 0.5f;
 
+    [SyncVar(hook = nameof(OnVoiceChannelChanged))]
+    private string voiceChannelName;
+
+    private static string serverVoiceChannelName;
+
     [SyncVar(hook = nameof(OnPitchChanged))]
     private float syncedPitch;
 
     private Camera[] cameras;
     private AudioListener[] audioListeners;
     private float lastSentPitch;
+    private VivoxProximityVoice proximityVoice;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetVoiceChannelStatics()
+    {
+        serverVoiceChannelName = null;
+    }
 
     private void Awake()
     {
@@ -36,14 +48,56 @@ public class NetworkPlayerSetup : NetworkBehaviour
         ApplyRemotePitch(syncedPitch);
     }
 
+    public override void OnStartServer()
+    {
+        // 첫 플레이어가 생성될 때마다 서버 세션 전용 채널을 새로 만든다.
+        // 채널 이름을 Mirror로 전달하므로 사설 IP가 같은 다른 방과도 겹치지 않는다.
+        if (NetworkServer.connections.Count <= 1 || string.IsNullOrEmpty(serverVoiceChannelName))
+            serverVoiceChannelName = "sitb-" + System.Guid.NewGuid().ToString("N");
+
+        voiceChannelName = serverVoiceChannelName;
+    }
+
     public override void OnStartLocalPlayer()
     {
         ApplyLocalState(true);
+        TryStartVoice();
     }
 
     public override void OnStopClient()
     {
+        if (proximityVoice != null)
+            proximityVoice.StopVoice();
         ApplyLocalState(true);
+    }
+
+    private void OnVoiceChannelChanged(string oldChannel, string newChannel)
+    {
+        if (isLocalPlayer)
+            TryStartVoice();
+    }
+
+    private void TryStartVoice()
+    {
+        if (!isLocalPlayer || string.IsNullOrEmpty(voiceChannelName))
+            return;
+
+        if (proximityVoice == null)
+            proximityVoice = GetComponent<VivoxProximityVoice>();
+        if (proximityVoice == null)
+            proximityVoice = gameObject.AddComponent<VivoxProximityVoice>();
+
+        Transform listenerTransform = transform;
+        foreach (Camera cam in cameras)
+        {
+            if (cam != null && cam.enabled)
+            {
+                listenerTransform = cam.transform;
+                break;
+            }
+        }
+
+        proximityVoice.StartVoice(voiceChannelName, listenerTransform);
     }
 
     private void Update()

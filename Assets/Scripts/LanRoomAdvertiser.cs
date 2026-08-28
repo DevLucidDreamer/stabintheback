@@ -14,11 +14,11 @@ public class LanRoomAdvertiser : MonoBehaviour
     [Tooltip("이 씬에 있는 동안만 방을 알린다(대기실)")]
     [SerializeField] private string lobbyScene = "Lobby";
 
-    private string cachedCode;
-
     private void Update()
     {
-        bool open = NetworkServer.active && SceneManager.GetActiveScene().name == lobbyScene;
+        bool open = NetworkServer.active &&
+                    SceneManager.GetActiveScene().name == lobbyScene &&
+                    !string.IsNullOrEmpty(GameLaunch.Code);
 
         if (!open)
         {
@@ -30,7 +30,7 @@ public class LanRoomAdvertiser : MonoBehaviour
         if (!LanRoomBeacon.IsAdvertising)
             LanRoomBeacon.StartAdvertising();
 
-        LanRoomBeacon.SetRoomInfo(Code(), NetworkServer.connections.Count, NetworkServer.maxConnections);
+        LanRoomBeacon.SetRoomInfo(GameLaunch.Code, NetworkServer.connections.Count, NetworkServer.maxConnections);
         LanRoomBeacon.PumpAdvertising();
     }
 
@@ -38,15 +38,4 @@ public class LanRoomAdvertiser : MonoBehaviour
 
     private void OnApplicationQuit() => LanRoomBeacon.StopAdvertising();
 
-    /// <summary>대기실 화면에 뜨는 것과 같은 방 코드.</summary>
-    private string Code()
-    {
-        if (!string.IsNullOrEmpty(GameLaunch.Code))
-            return GameLaunch.Code;
-
-        if (cachedCode == null)
-            cachedCode = RoomCode.FromAddress(RoomCode.LocalAddress());
-
-        return cachedCode;
-    }
 }

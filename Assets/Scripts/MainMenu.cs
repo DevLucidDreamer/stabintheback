@@ -16,7 +16,8 @@ using UnityEngine.UI;
 ///   OptionsPanel : 소리 / 언어 / 만든 사람
 /// 호스트·참가 모두 대기실(Lobby) 씬으로 들어간다.
 ///
-/// 빠른 참가는 LanRoomBeacon으로 같은 공유기 안의 열린 방을 찾아 코드 없이 바로 들어간다.
+/// 빠른 참가는 LanRoomBeacon으로 같은 공유기 안의 열린 방을 찾고,
+/// 인터넷 접속 자체는 Unity Relay 참가 코드로 수행한다.
 /// </summary>
 public class MainMenu : MonoBehaviour
 {
@@ -150,16 +151,11 @@ public class MainMenu : MonoBehaviour
         if (searching)
             return;
 
-        string address = RoomCode.LocalAddress();
-        string code = RoomCode.FromAddress(address);
-
         GameLaunch.Mode = GameLaunch.LaunchMode.Host;
-        GameLaunch.Address = address;
-        GameLaunch.Code = code;
+        GameLaunch.Address = "relay";
+        GameLaunch.Code = string.Empty;
 
-        SetStatus(string.IsNullOrEmpty(code)
-            ? "방을 엽니다..."
-            : $"방을 엽니다. 코드: {code}");
+        SetStatus("Unity Relay 방을 만드는 중...");
         SceneManager.LoadScene(lobbyScene);
     }
 
@@ -168,32 +164,20 @@ public class MainMenu : MonoBehaviour
         if (searching)
             return;
 
-        string input = codeField != null ? codeField.text.Trim() : string.Empty;
+        string input = codeField != null ? NormalizeRelayCode(codeField.text) : string.Empty;
         if (string.IsNullOrEmpty(input))
         {
             SetStatus("방 코드를 입력하세요.");
             return;
         }
 
-        string address;
-        string code;
-        if (RoomCode.LooksLikeAddress(input))
+        if (!LooksLikeRelayCode(input))
         {
-            // IP 주소를 직접 적은 경우도 받아준다.
-            address = input;
-            code = RoomCode.FromAddress(input);
-        }
-        else if (!RoomCode.TryToAddress(input, out address))
-        {
-            SetStatus($"코드를 확인하세요. (영문 {RoomCode.Length}글자)");
+            SetStatus("Relay 방 코드는 영문과 숫자로 입력하세요.");
             return;
         }
-        else
-        {
-            code = input.ToUpperInvariant();
-        }
 
-        Join(address, code, $"{address} 에 접속합니다...");
+        Join(input, $"Relay 방 {input}에 접속합니다...");
     }
 
     /// <summary>같은 공유기 안에서 열려 있는 방을 찾아 아무 데나 들어간다.</summary>
@@ -241,18 +225,39 @@ public class MainMenu : MonoBehaviour
             yield break;
         }
 
-        string code = string.IsNullOrEmpty(pick.Code) ? RoomCode.FromAddress(pick.Address) : pick.Code;
-        Join(pick.Address, code, $"방을 찾았습니다. 들어갑니다... ({code})");
+        string code = NormalizeRelayCode(pick.Code);
+        if (!LooksLikeRelayCode(code))
+        {
+            SetStatus("찾은 방의 Relay 코드가 아직 준비되지 않았습니다. 다시 시도해 주세요.");
+            yield break;
+        }
+
+        Join(code, $"방을 찾았습니다. 들어갑니다... ({code})");
     }
 
-    private void Join(string address, string code, string message)
+    private void Join(string code, string message)
     {
         GameLaunch.Mode = GameLaunch.LaunchMode.Client;
-        GameLaunch.Address = address;
+        GameLaunch.Address = "relay";
         GameLaunch.Code = code;
 
         SetStatus(message);
         SceneManager.LoadScene(lobbyScene);
+    }
+
+    private static string NormalizeRelayCode(string value)
+        => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().Replace(" ", string.Empty).ToUpperInvariant();
+
+    private static bool LooksLikeRelayCode(string value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > 32)
+            return false;
+
+        foreach (char c in value)
+            if (!char.IsLetterOrDigit(c))
+                return false;
+
+        return true;
     }
 
     private void OnQuit()

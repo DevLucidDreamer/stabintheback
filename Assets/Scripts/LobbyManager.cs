@@ -47,7 +47,6 @@ public class LobbyManager : NetworkBehaviour
     private bool serverChangingScene;
     private bool localReady;
     private float recountTimer;
-    private string cachedCode;
     private bool optionsOpen;
 
     /// <summary>이 클라이언트가 방을 연 사람인지. 옵션을 만질 수 있는 사람은 호스트뿐이다.</summary>
@@ -271,17 +270,10 @@ public class LobbyManager : NetworkBehaviour
     // ------------------------------------------------------------ 안내 UI
 
     /// <summary>
-    /// 화면에 표시할 방 코드. 타이틀에서 넘어왔으면 그 값을, 대기실 씬을 직접 열어
-    /// 호스트를 시작했으면 이 PC의 주소로 만들어 보여준다.
+    /// 화면에 표시할 Unity Relay 참가 코드.
     /// </summary>
     public string RoomCodeText()
     {
-        if (!string.IsNullOrEmpty(GameLaunch.Code))
-            return GameLaunch.Code;
-
-        if (cachedCode == null && NetworkServer.active)
-            cachedCode = RoomCode.FromAddress(RoomCode.LocalAddress());
-
-        return cachedCode;
+        return string.IsNullOrEmpty(GameLaunch.Code) ? null : GameLaunch.Code;
     }
 }

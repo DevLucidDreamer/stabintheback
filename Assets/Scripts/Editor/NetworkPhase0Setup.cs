@@ -14,14 +14,13 @@ public static class NetworkPhase0Setup
     public static void CreateEmptyNetworkBootstrap()
     {
         Type networkManagerType = FindType("NetworkManager");
-        Type telepathyTransportType = FindType("TelepathyTransport");
-        Type networkManagerHudType = FindType("NetworkManagerHUD");
+        Type relayTransportType = FindType("RelayMirrorTransport");
 
-        if (networkManagerType == null || telepathyTransportType == null)
+        if (networkManagerType == null || relayTransportType == null)
         {
             EditorUtility.DisplayDialog(
-                "Mirror is not imported",
-                "Import Mirror first, then run this menu again.\nExpected components: Mirror.NetworkManager and TelepathyTransport.",
+                "Relay transport is not ready",
+                "Mirror와 RelayMirrorTransport가 컴파일되었는지 확인하세요.",
                 "OK");
             return;
         }
@@ -33,17 +32,14 @@ public static class NetworkPhase0Setup
             Undo.RegisterCreatedObjectUndo(bootstrap, "Create Network Bootstrap");
         }
 
-        Component transport = EnsureComponent(bootstrap, telepathyTransportType);
+        Component transport = EnsureComponent(bootstrap, relayTransportType);
         Component manager = EnsureComponent(bootstrap, networkManagerType);
         SetMember(manager, "transport", transport);
         SetMember(manager, "autoCreatePlayer", false);
 
-        if (networkManagerHudType != null)
-            EnsureComponent(bootstrap, networkManagerHudType);
-
         Selection.activeGameObject = bootstrap;
         EditorSceneManager.MarkSceneDirty(bootstrap.scene);
-        Debug.Log("[Phase0] NetworkBootstrap is ready. Start Host in one editor and Client in a ParrelSync clone.");
+        Debug.Log("[Phase0] Unity Relay용 NetworkBootstrap이 준비되었습니다. MainTitle에서 방을 생성하거나 참가하세요.");
     }
 
     private static Component EnsureComponent(GameObject target, Type type)

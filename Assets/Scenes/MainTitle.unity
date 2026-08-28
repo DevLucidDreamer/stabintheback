@@ -21970,7 +21970,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: ABCDEFG
+  m_text: ABC123
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 765f8d027f5eb704ea8ab63ebc5265d5, type: 2}
   m_sharedMaterial: {fileID: -1680000159712255704, guid: 765f8d027f5eb704ea8ab63ebc5265d5, type: 2}

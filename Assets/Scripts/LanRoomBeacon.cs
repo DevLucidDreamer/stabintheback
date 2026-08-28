@@ -13,18 +13,18 @@ using UnityEngine;
 /// 매치메이킹 서버가 없으므로 방식은 단순하다.
 ///   호스트 : 47776 포트에 앉아 "SITB?1" 이 오면 방 정보를 그대로 돌려준다.
 ///   참가자 : 브로드캐스트로 "SITB?1" 을 뿌리고 몇 초간 답장을 모은다.
-/// 답장을 보낸 상대의 IP가 곧 접속 주소라서, 기존 코드 접속 경로(GameLaunch.Address)에
-/// 그대로 얹힌다.
+/// 답장에는 Unity Relay 참가 코드를 싣는다. 발견은 LAN에서 하지만 게임 트래픽은
+/// Relay를 통해 흐르므로 게임용 포트 포워딩은 필요 없다.
 ///
 /// 소켓을 백그라운드 스레드로 돌리지 않고 Pump/코루틴에서 폴링만 한다.
 /// 프레임당 한 번이면 충분히 빠르고, Unity API를 다른 스레드에서 만질 일이 없어진다.
 ///
-/// 한계: 브로드캐스트는 공유기를 넘지 못한다. 인터넷 너머 친구는 예전처럼 방 코드로 들어와야 한다.
+/// 한계: 브로드캐스트는 공유기를 넘지 못한다. 인터넷 너머 친구는 Relay 방 코드를 입력해야 한다.
 /// 방화벽이 UDP 47776을 막고 있으면 서로 못 찾는다.
 /// </summary>
 public static class LanRoomBeacon
 {
-    /// <summary>신호등 전용 포트. 게임 트래픽(Telepathy 7777)과는 별개다.</summary>
+    /// <summary>LAN 방 검색 전용 포트. Relay 게임 트래픽과는 별개다.</summary>
     public const int Port = 47776;
 
     private const string Request = "SITB?1";

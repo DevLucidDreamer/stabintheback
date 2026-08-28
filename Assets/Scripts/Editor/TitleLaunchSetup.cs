@@ -15,9 +15,8 @@ using UnityEngine;
 /// 그 결과 "No cameras rendering"이 뜬다.
 ///
 /// 이 메뉴는 현재 열려 있는 씬에 부트스트랩을 완전히 배선해준다:
-///  - TelepathyTransport
+///  - RelayMirrorTransport (Unity Relay + UTP)
 ///  - NetworkManager (playerPrefab = NetworkPlayer, autoCreatePlayer = true)
-///  - NetworkManagerHUD (수동 제어용)
 ///  - NetworkAutoLaunch (타이틀에서 넘어온 GameLaunch.Mode를 읽어 자동 시작)
 ///
 /// NetworkDemo 씬을 열고 실행하면 타이틀 → 게임 흐름이 정상 동작한다.
@@ -39,18 +38,13 @@ public static class TitleLaunchSetup
             Undo.RegisterCreatedObjectUndo(bootstrap, "Create Network Bootstrap");
         }
 
-        // --- Transport (TelepathyTransport) ---
+        // --- Transport (Unity Relay + UTP) ---
         Transport transport = bootstrap.GetComponent<Transport>();
-        if (transport == null)
+        if (!(transport is RelayMirrorTransport))
         {
-            Type telepathyType = FindType("TelepathyTransport");
-            if (telepathyType == null)
-            {
-                EditorUtility.DisplayDialog("Mirror 없음",
-                    "TelepathyTransport 타입을 찾지 못했습니다. Mirror가 임포트되어 있는지 확인하세요.", "OK");
-                return;
-            }
-            transport = (Transport)Undo.AddComponent(bootstrap, telepathyType);
+            if (transport != null)
+                Undo.DestroyObjectImmediate(transport);
+            transport = Undo.AddComponent<RelayMirrorTransport>(bootstrap);
         }
 
         // --- NetworkManager ---
@@ -67,10 +61,6 @@ public static class TitleLaunchSetup
             manager.playerPrefab = playerPrefab;
         else
             Debug.LogWarning("[TitleLaunch] NetworkPlayer 프리팹을 찾지 못함: " + PlayerPrefabPath);
-
-        // --- HUD (수동 Host/Client 버튼, 있으면 편리) ---
-        if (bootstrap.GetComponent<NetworkManagerHUD>() == null)
-            Undo.AddComponent<NetworkManagerHUD>(bootstrap);
 
         // --- NetworkAutoLaunch (타이틀 실행 의도를 읽어 자동 시작) ---
         if (bootstrap.GetComponent<NetworkAutoLaunch>() == null)

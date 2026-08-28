@@ -678,6 +678,7 @@ GameObject:
   - component: {fileID: 6500936569306827593}
   - component: {fileID: 7600932659541206929}
   - component: {fileID: 1762871598044365092}
+  - component: {fileID: 8183371748993204511}
   - component: {fileID: 4833209538471050626}
   - component: {fileID: 1251604038556726830}
   - component: {fileID: 3629179602744080273}
@@ -957,6 +958,26 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   spawnProtection: 1.5
+--- !u!114 &8183371748993204511
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7961999844373101444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91f5c70bd2524c48872e87a67de734bf, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::VivoxProximityVoice
+  audibleDistance: 25
+  conversationalDistance: 1
+  fadeIntensity: 1
+  fadeModel: 1
+  allowStereoPanning: 1
+  positionUpdateInterval: 0.1
+  pushToTalk: 0
+  pushToTalkKey: 36
 --- !u!114 &1251604038556726830
 MonoBehaviour:
   m_ObjectHideFlags: 0
