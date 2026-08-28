@@ -158,7 +158,7 @@ public static class TitleUiBuilder
             new Vector2(0f, -44f), new Vector2(520f, 62f), 42f, Ink, TextAlignmentOptions.Center);
         MakeText(hostCard, "HostDesc",
             "새 방을 열고 방장이 됩니다.\n\n" +
-            "방을 열면 영문 " + RoomCode.Length + "글자 코드가 나옵니다.\n" +
+            "방을 열면 Unity Relay 코드가 나옵니다.\n" +
             "친구에게 코드를 알려주세요.\n\n" +
             "같은 공유기에 있다면 코드 없이\n'빠른 참가'로도 들어올 수 있습니다.",
             TopCenter, TopCenter, new Vector2(0f, -130f), new Vector2(500f, 300f), 24f, Dim, TextAlignmentOptions.Top, wrap: true);
@@ -174,7 +174,7 @@ public static class TitleUiBuilder
         MakeText(joinCard, "CodeLabel", "방 코드", TopCenter, TopCenter,
             new Vector2(0f, -122f), new Vector2(480f, 40f), 24f, Dim, TextAlignmentOptions.Center);
 
-        MakeInput(joinCard, "CodeField", "ABCDEFG", TopCenter, TopCenter,
+        MakeInput(joinCard, "CodeField", "ABC123", TopCenter, TopCenter,
             new Vector2(0f, -166f), new Vector2(480f, 92f));
 
         MakeButton(joinCard, "JoinButton", "코드로 참가", TopCenter, TopCenter,
@@ -413,7 +413,7 @@ public static class TitleUiBuilder
         field.placeholder = placeholder;
         field.richText = false;
         field.lineType = TMP_InputField.LineType.SingleLine;
-        field.characterLimit = 15; // 코드 7자 또는 IP 주소(최대 15자)
+        field.characterLimit = 15; // Unity Relay 참가 코드
         field.onFocusSelectAll = true;
         field.customCaretColor = true;
         field.caretColor = Ink;
