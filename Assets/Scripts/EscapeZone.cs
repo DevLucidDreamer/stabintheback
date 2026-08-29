@@ -36,9 +36,13 @@ public class EscapeZone : NetworkBehaviour
             GameHud.Ensure().ShowToast("아직 할 일이 남았다!", 2.5f, new Color(1f, 0.85f, 0.3f));
     }
 
-    /// <summary>한 판의 목표가 끝났는가. 캠핑장이면 바베큐까지 완성된 상태.</summary>
+    /// <summary>현재 스테이지의 팀 공용 목표가 끝났는가.</summary>
     private static bool GoalReached()
     {
+        CampChecklistManager checklist = CampChecklistManager.Instance;
+        if (checklist != null)
+            return checklist.IsComplete();
+
         CampGameManager game = CampGameManager.Instance;
         return game == null || game.Phase == CampPhase.Feast;
     }

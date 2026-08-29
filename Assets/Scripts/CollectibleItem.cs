@@ -30,16 +30,21 @@ public class CollectibleItem : Interactable
     public override void Interact(PlayerInteraction player)
     {
         CampGameManager game = CampGameManager.Instance;
-        if (game == null)
+        if (game != null)
         {
-            // 매니저가 없는 씬(대기실 등)에서는 그냥 사라지기만 한다.
-            gameObject.SetActive(false);
+            if (game.IsGathering)
+                game.RequestCollect(itemId);
             return;
         }
 
-        if (!game.IsGathering)
-            return; // 노을이 진 뒤에는 더 줍지 않는다
+        CampChecklistManager checklist = CampChecklistManager.Instance;
+        if (checklist != null)
+        {
+            checklist.RequestCollect(itemId);
+            return;
+        }
 
-        game.RequestCollect(itemId);
+        // 목표 매니저가 없는 대기실/실험 씬의 오프라인 폴백.
+        gameObject.SetActive(false);
     }
 }

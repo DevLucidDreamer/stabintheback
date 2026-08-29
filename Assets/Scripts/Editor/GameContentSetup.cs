@@ -12,7 +12,7 @@ using UnityEngine;
 ///     래그돌 빌더가 같은 뼈대에서 시체를 만들 수 있다.
 ///  4) 씬을 갈아엎는 작업은 프리팹이 다 끝난 뒤에 한다.
 ///  5) 대기실을 <b>마지막</b>에 만든다 — 대기실 빌더가 타이틀 연결과
-///     Build Settings 순서(타이틀 → 대기실 → 캠핑장)를 정리하기 때문이다.
+///     Build Settings 순서(타이틀 → 대기실 → 집 → 캠핑장)를 정리하기 때문이다.
 ///
 /// 메뉴: Tools > Setup > Build Everything
 /// </summary>
@@ -50,7 +50,7 @@ public static class GameContentSetup
         LobbyBuilder.BuildLobby();
 
         Debug.Log("[Setup] 전체 생성 완료.\n" +
-                  "타이틀 → 대기실 → 캠핑장 순서로 Build Settings가 정리되었습니다.\n" +
+                  "타이틀 → 대기실 → 집 → 캠핑장 순서로 Build Settings가 정리되었습니다.\n" +
                   "MainTitle 씬을 열고 플레이하면 처음부터 확인할 수 있습니다.");
     }
 

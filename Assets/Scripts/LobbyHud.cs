@@ -60,7 +60,7 @@ public class LobbyHud : MonoBehaviour
 
         string code = lobby.RoomCodeText();
         hud.SetTopLeft(string.IsNullOrEmpty(code) ? string.Empty : $"방 코드\n<size=140%><b>{code}</b></size>");
-        hud.SetTopRight($"인원  {lobby.PlayerCount} / {lobby.TargetPlayers}");
+        hud.SetTopRight($"인원 {lobby.PlayerCount}/{lobby.TargetPlayers} · 준비 {lobby.ReadyCount}/{lobby.TargetPlayers}");
 
         int left = lobby.CountdownSecondsLeft;
         if (left >= 0)
@@ -76,7 +76,10 @@ public class LobbyHud : MonoBehaviour
         {
             shownCountdown = -2;
             int missing = Mathf.Max(0, lobby.TargetPlayers - lobby.PlayerCount);
-            hud.SetGoal(missing > 0 ? $"{missing}명 더 모이면 출발" : "곧 출발합니다");
+            int unready = Mathf.Max(0, lobby.TargetPlayers - lobby.ReadyCount);
+            hud.SetGoal(missing > 0
+                ? $"{missing}명 더 모이면 출발"
+                : unready > 0 ? $"출발 발판에서 준비하세요  {lobby.ReadyCount}/{lobby.TargetPlayers}" : "곧 출발합니다");
         }
 
         if (optionsRoot != null && optionsRoot.activeSelf)
@@ -112,7 +115,7 @@ public class LobbyHud : MonoBehaviour
         plusButton.interactable = lobby.TargetPlayers < lobby.MaxPlayers;
 
         noteLabel.text =
-            $"{lobby.TargetPlayers}명이 모이면 자동으로 출발합니다.\n" +
+            $"{lobby.TargetPlayers}명이 모여 전원 준비하면 출발합니다.\n" +
             $"조절 범위 {lobby.MinPlayers}~{lobby.MaxPlayers}명 · 현재 접속 {lobby.PlayerCount}명";
     }
 

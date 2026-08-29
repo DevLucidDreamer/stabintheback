@@ -111,7 +111,7 @@ Changed:
 - `Assets/Scripts/Editor/LobbyBuilder.cs` — campground target, 8 spawns, cap 8
 - `Assets/Scripts/Editor/Stage2Builder.cs` — real weapons, 8 spawns, loop to Lobby
 - `Assets/Scripts/Editor/PlayerAnimatorSetup.cs` — uses `GoshiModel`, wires an idle clip
-- `Assets/Scenes/Lobby.unity` — `firstStageScene: Stage2_Campground`
+- `Assets/Scenes/Lobby.unity` — `firstStageScene: NetworkDemo`
 
 ## Manual Unity Editor steps
 

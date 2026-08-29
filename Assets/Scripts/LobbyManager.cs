@@ -8,8 +8,7 @@ using UnityEngine.InputSystem;
 ///
 /// - 호스트가 Tab을 눌러 '방 옵션'을 열고 정원(몇 명이 모이면 출발할지)을 정한다.
 ///   옵션 변경은 호스트만 가능하며, 서버가 다시 한 번 검사한다.
-/// - 정한 인원이 다 모이면 카운트다운 후 게임 씬(캠핑장)으로 전환한다.
-/// - 정원이 덜 찼더라도 접속자 전원이 출발 발판에 올라서면 바로 출발할 수 있다.
+/// - 정한 인원이 모두 접속하고 출발 발판에 올라서면 카운트다운 후 첫 스테이지로 전환한다.
 /// - 카운트다운 중 조건이 깨지면(누가 나가거나 준비를 풀면) 즉시 취소한다.
 /// </summary>
 [RequireComponent(typeof(NetworkIdentity))]
@@ -19,7 +18,7 @@ public class LobbyManager : NetworkBehaviour
 
     [Header("씬 전환")]
     [Tooltip("인원이 모이면 이동할 게임 씬 이름(Build Settings에 포함되어야 함)")]
-    [SerializeField] private string firstStageScene = "Stage2_Campground";
+    [SerializeField] private string firstStageScene = "NetworkDemo";
 
     [Tooltip("출발 조건이 갖춰진 뒤 실제 전환까지의 카운트다운(초)")]
     [SerializeField] private float countdownSeconds = 5f;
@@ -255,11 +254,10 @@ public class LobbyManager : NetworkBehaviour
         playerCount = total;
         readyCount = readyIds.Count;
 
-        // 출발 조건은 오직 '정한 정원이 다 찼는가' 하나다.
-        // 예전에는 "있는 사람 전원이 발판 위" 조건도 있었는데, 호스트 혼자 발판에 서면
-        // 1/1로 전원 준비가 되어 정원과 무관하게 출발해 버렸다.
-        // 발판은 이제 준비 표시 전용이고, 혼자 테스트하려면 정원을 1로 내리면 된다.
-        bool shouldStart = total > 0 && total >= targetPlayers;
+        // 접속 인원만으로 출발시키면 마지막 스테이지에서 대기실로 돌아오자마자 같은 판이
+        // 다시 시작된다. 정원이 찼고 그 인원이 모두 발판에서 준비한 경우에만 출발한다.
+        // 혼자 테스트할 때도 정원을 1로 내린 뒤 발판에 올라가야 한다.
+        bool shouldStart = total >= targetPlayers && readyCount >= targetPlayers;
 
         if (shouldStart && countdownEndsAt < 0d)
             countdownEndsAt = NetworkTime.time + countdownSeconds;

@@ -25,6 +25,8 @@ public sealed class VivoxProximityVoice : MonoBehaviour
     [Tooltip("켜면 키를 누르는 동안에만 송신합니다. 기본값은 오픈 마이크입니다.")]
     [SerializeField] private bool pushToTalk;
     [SerializeField] private Key pushToTalkKey = Key.V;
+    [Tooltip("오픈 마이크 모드에서 음소거를 켜고 끄는 키입니다.")]
+    [SerializeField] private Key muteToggleKey = Key.M;
 
     private static readonly SemaphoreSlim ServiceGate = new SemaphoreSlim(1, 1);
 
@@ -33,12 +35,18 @@ public sealed class VivoxProximityVoice : MonoBehaviour
     private string requestedChannel;
     private bool joined;
     private bool stopping;
+    private bool connectionFailed;
     private bool lastTransmitState;
     private float nextPositionUpdate;
     private int operationVersion;
 
     public bool IsConnected => joined;
+    public bool IsConnecting => !joined && !stopping && !string.IsNullOrEmpty(requestedChannel);
+    public bool ConnectionFailed => connectionFailed;
     public bool IsMicrophoneMuted => VivoxService.Instance != null && VivoxService.Instance.IsInputDeviceMuted;
+    public bool IsPushToTalk => pushToTalk;
+    public Key PushToTalkKey => pushToTalkKey;
+    public Key MuteToggleKey => muteToggleKey;
     public string ActiveChannel => activeChannel;
 
     /// <summary>로컬 플레이어를 지정된 근접 음성 채널에 연결한다.</summary>
@@ -53,6 +61,8 @@ public sealed class VivoxProximityVoice : MonoBehaviour
         listener = listenerTransform != null ? listenerTransform : transform;
         requestedChannel = SanitizeChannelName(channelName);
         stopping = false;
+        connectionFailed = false;
+        VivoxVoiceHud.Ensure().Bind(this);
 
         if (joined && activeChannel == requestedChannel)
             return;
@@ -69,6 +79,7 @@ public sealed class VivoxProximityVoice : MonoBehaviour
         stopping = true;
         requestedChannel = null;
         ++operationVersion;
+        VivoxVoiceHud.Current?.Unbind(this);
         _ = DisconnectAsync();
 #endif
     }
@@ -145,7 +156,11 @@ public sealed class VivoxProximityVoice : MonoBehaviour
         catch (Exception exception)
         {
             if (IsCurrent(version, channelName))
+            {
+                connectionFailed = true;
+                requestedChannel = null;
                 Debug.LogError($"[Vivox] 음성 채팅 연결 실패: {exception.Message}\n{exception}");
+            }
         }
         finally
         {
@@ -186,6 +201,10 @@ public sealed class VivoxProximityVoice : MonoBehaviour
     {
         if (!joined)
             return;
+
+        Keyboard keyboard = Keyboard.current;
+        if (!pushToTalk && keyboard != null && keyboard[muteToggleKey].wasPressedThisFrame)
+            ToggleMicrophoneMute();
 
         ApplyPushToTalk();
 

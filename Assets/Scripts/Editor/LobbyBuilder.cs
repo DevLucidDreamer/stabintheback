@@ -31,11 +31,12 @@ public static class LobbyBuilder
     private const string DemoPath = "Assets/Scenes/NetworkDemo.unity";
     private const string Stage2Path = "Assets/Scenes/Stage2_Campground.unity";
     private const string PlayerPrefabPath = "Assets/Prefabs/NetworkPlayer.prefab";
+    private const string TunaPrefabPath = "Assets/Prefabs/Weapons/Frozen_Tuna.prefab";
 
     private const string LobbySceneName = "Lobby";
 
     /// <summary>대기실에서 인원이 다 모이면 출발할 게임 씬.</summary>
-    private const string FirstStageScene = "Stage2_Campground";
+    private const string FirstStageScene = "NetworkDemo";
 
     /// <summary>방 정원의 기본값. 호스트가 대기실에서 Tab을 눌러 바꿀 수 있다.</summary>
     private const int DefaultTargetPlayers = 4;
@@ -110,6 +111,50 @@ public static class LobbyBuilder
                   "\n- 타이틀에서 호스트/참가하면 대기실로 들어갑니다." +
                   "\n- 정원이 다 차면 " + FirstStageScene + " 으로 출발합니다 (호스트가 Tab으로 정원 조절)." +
                   "\n- 배치를 바꾸려면 이 파일의 좌표를 고치고 다시 실행하세요.");
+    }
+
+    /// <summary>
+    /// 기존 대기실의 배치는 유지한 채 냉동참치와 씬 흐름만 최신 구성으로 갱신한다.
+    /// 전체 빌더를 다시 돌릴 필요가 없는 콘텐츠 마이그레이션용 메뉴다.
+    /// </summary>
+    [MenuItem("Tools/Lobby/Apply Lobby Content Upgrade")]
+    public static void UpgradeExistingLobby()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return;
+
+        var scene = EditorSceneManager.OpenScene(LobbyPath, OpenSceneMode.Single);
+        LobbyAltar altar = Object.FindFirstObjectByType<LobbyAltar>();
+        if (altar == null)
+        {
+            Debug.LogError("[Lobby] TunaAltar/LobbyAltar를 찾지 못했습니다. 대기실 전체 빌더를 실행하세요.");
+            return;
+        }
+
+        Weapon oldWeapon = altar.GetComponentInChildren<Weapon>(true);
+        Transform tuna = InstantiateFrozenTuna(altar.transform, new Vector3(0f, 1.18f, 0f), 90f);
+        if (tuna == null)
+            return;
+
+        if (oldWeapon != null)
+            Object.DestroyImmediate(oldWeapon.gameObject);
+
+        altar.Configure(tuna.GetComponent<Weapon>());
+
+        LobbyManager lobby = Object.FindFirstObjectByType<LobbyManager>();
+        if (lobby != null)
+        {
+            var so = new SerializedObject(lobby);
+            so.FindProperty("firstStageScene").stringValue = FirstStageScene;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(lobby);
+        }
+
+        NetworkPhase4Setup.SetupWeaponSync();
+        SetBuildOrder();
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("[Lobby] Frozen_Tuna 프리팹 교체 및 Lobby → NetworkDemo → Stage2 흐름 갱신 완료.");
     }
 
     // ---------------------------------------------------------------- 지형
@@ -283,7 +328,9 @@ public static class LobbyBuilder
         Prim(top, "Trim", PrimitiveType.Cylinder, new Vector3(0f, 0.58f, 0f), new Vector3(1.6f, 0.03f, 1.6f), matWoodDark);
 
         // 무기 = 냉동참치. 상판 윗면(y = 0.5 + 0.63 + 0.05 = 1.18) 위에 안치.
-        Transform tuna = FrozenTuna(g, new Vector3(0f, 1.18f, 0f), 90f);
+        Transform tuna = InstantiateFrozenTuna(g, new Vector3(0f, 1.18f, 0f), 90f);
+        if (tuna == null)
+            return;
 
         // 좌대 조명. 참치를 집어도 그대로 켜 둔다 —
         // 조명이 꺼지면 누가 가져갔다는 걸 모두가 알아채기 때문이다.
@@ -303,19 +350,22 @@ public static class LobbyBuilder
         altar.Configure(tuna.GetComponent<Weapon>());
     }
 
-    /// <summary>무기로 쓸 수 있는 냉동참치.</summary>
-    private static Transform FrozenTuna(Transform parent, Vector3 localPos, float rotY)
+    /// <summary>캠핑장과 동일한 Frozen_Tuna 무기 프리팹을 배치한다.</summary>
+    private static Transform InstantiateFrozenTuna(Transform parent, Vector3 localPos, float rotY)
     {
-        Transform g = Group(parent, "FrozenTuna", localPos, rotY);
-        Prim(g, "Body", PrimitiveType.Sphere, new Vector3(0f, 0.13f, 0.02f), new Vector3(0.22f, 0.26f, 0.6f), matTuna);
-        Box(g, "Tail", new Vector3(0f, 0.13f, -0.36f), new Vector3(0.04f, 0.3f, 0.12f), matTuna);
-        Box(g, "FinTop", new Vector3(0f, 0.29f, 0.05f), new Vector3(0.03f, 0.1f, 0.15f), matTuna);
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TunaPrefabPath);
+        if (prefab == null)
+        {
+            Debug.LogError("[Lobby] Frozen_Tuna 프리팹이 없습니다. Tools > Weapons > Build Weapon Prefabs를 먼저 실행하세요.");
+            return null;
+        }
 
-        var w = g.gameObject.AddComponent<Weapon>();
-        w.SetDisplayName("냉동참치");
-        w.holdPosition = new Vector3(0f, -0.05f, -0.05f);
-        w.holdEuler = new Vector3(-75f, 0f, 0f);
-        return g;
+        var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        Weapon weapon = go.GetComponent<Weapon>();
+        float lift = weapon != null ? weapon.groundOffset : 0f;
+        go.transform.localPosition = localPos + Vector3.up * lift;
+        go.transform.localRotation = Quaternion.Euler(0f, rotY, 0f);
+        return go.transform;
     }
 
     /// <summary>
@@ -758,24 +808,23 @@ public static class LobbyBuilder
     }
 
     /// <summary>
-    /// Build Settings를 실제로 쓰는 세 씬만 남긴다: 타이틀 → 대기실 → 캠핑장.
-    ///
-    /// NetworkDemo·Demo·SampleScene은 개발 초기의 실험용이라 빌드에 넣지 않는다.
-    /// 파일은 그대로 두므로 필요하면 에디터에서 직접 열어 볼 수 있다.
+    /// Build Settings를 실제 게임 흐름대로 정리한다:
+    /// 타이틀 → 대기실 → 집(NetworkDemo) → 캠핑장.
     /// </summary>
     private static void SetBuildOrder()
     {
         var order = new List<string>();
         if (System.IO.File.Exists(TitlePath)) order.Add(TitlePath);
         order.Add(LobbyPath);
+        if (System.IO.File.Exists(DemoPath)) order.Add(DemoPath);
         if (System.IO.File.Exists(Stage2Path)) order.Add(Stage2Path);
 
         EditorBuildSettings.scenes = order
             .Select(path => new EditorBuildSettingsScene(path, true))
             .ToArray();
 
-        if (System.IO.File.Exists(DemoPath))
-            Debug.Log("[Lobby] NetworkDemo 씬은 빌드 목록에서 제외했습니다(실험용). 파일은 그대로 남아 있습니다.");
+        if (!System.IO.File.Exists(DemoPath))
+            Debug.LogWarning("[Lobby] 첫 스테이지 NetworkDemo 씬이 없어 빌드 목록에 넣지 못했습니다.");
     }
 
     // ---------------------------------------------------------------- 유틸

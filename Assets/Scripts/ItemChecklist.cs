@@ -38,9 +38,17 @@ public class ItemChecklist : MonoBehaviour
     private static readonly Quaternion ShownRot = Quaternion.Euler(-18f, 12f, 4f);
     private static readonly Quaternion HiddenRot = Quaternion.Euler(50f, 12f, 4f);
 
-    private void OnEnable() => CampGameManager.OnChanged += HandleChanged;
+    private void OnEnable()
+    {
+        CampGameManager.OnChanged += HandleChanged;
+        CampChecklistManager.OnChanged += HandleChanged;
+    }
 
-    private void OnDisable() => CampGameManager.OnChanged -= HandleChanged;
+    private void OnDisable()
+    {
+        CampGameManager.OnChanged -= HandleChanged;
+        CampChecklistManager.OnChanged -= HandleChanged;
+    }
 
     private void Start()
     {
@@ -111,6 +119,19 @@ public class ItemChecklist : MonoBehaviour
         CampGameManager game = CampGameManager.Instance;
         if (game == null)
         {
+            CampChecklistManager checklist = CampChecklistManager.Instance;
+            if (checklist != null)
+            {
+                sb.Clear();
+                sb.Append("< 캠핑 준비 >\n\n");
+                int count = Mathf.Min(checklist.Names.Length, Mathf.Min(checklist.Need.Length, checklist.Have.Length));
+                for (int i = 0; i < count; i++)
+                    Line(checklist.Names[i], checklist.Have[i], checklist.Need[i]);
+                sb.Append('\n').Append(checklist.IsComplete() ? "다 챙겼다!\n현관으로 나가자." : "전부 챙겨서\n현관으로 나가자.");
+                listText.text = sb.ToString();
+                return;
+            }
+
             // 대기실 등 목표가 없는 씬.
             listText.text = "< 캠핑 준비 >\n\n여기선 챙길 게 없다.\n출발하면 시작된다.";
             return;
