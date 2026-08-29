@@ -44811,7 +44811,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Made with Unity 6 \xB7 Mirror"
+  m_text: "v1.0.0 \xB7 Unity 6 \xB7 Mirror"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 765f8d027f5eb704ea8ab63ebc5265d5, type: 2}
   m_sharedMaterial: {fileID: -1680000159712255704, guid: 765f8d027f5eb704ea8ab63ebc5265d5, type: 2}
@@ -56105,7 +56105,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "STAB IN THE BACK\n\uCEA0\uD551\uC7A5\uC5D0\uC11C \uBC8C\uC5B4\uC9C0\uB294
-    \uBC30\uC2E0 \uD30C\uD2F0\uAC8C\uC784\n\nMade with Unity 6 \xB7 Mirror"
+    \uBC30\uC2E0 \uD30C\uD2F0\uAC8C\uC784\n\nv1.0.0 \xB7 Unity 6 \xB7 Mirror\n\uC11C\uB4DC\uD30C\uD2F0 \uACE0\uC9C0: THIRD_PARTY_NOTICES.txt"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 765f8d027f5eb704ea8ab63ebc5265d5, type: 2}
   m_sharedMaterial: {fileID: -1680000159712255704, guid: 765f8d027f5eb704ea8ab63ebc5265d5, type: 2}

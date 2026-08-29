@@ -18,7 +18,7 @@ using UnityEngine;
 /// 랜턴과 전구 줄이 시선을 광장 안쪽으로 모은다.
 ///
 /// 함께 처리하는 것:
-/// - Build Settings 순서를 [MainTitle, Lobby, NetworkDemo, Stage2]로 정리
+/// - Build Settings 순서를 [MainTitle, Lobby, Stage3_CursedFortress, Stage2_Campground]로 정리
 /// - MainTitle의 MainMenu가 대기실로 넘어가도록 대상 씬을 Lobby로 수정
 /// - TMP 기본 폰트를 Jalnan2 SDF로 지정 (런타임 HUD 글자용)
 ///
@@ -30,12 +30,14 @@ public static class LobbyBuilder
     private const string TitlePath = "Assets/Scenes/MainTitle.unity";
     private const string DemoPath = "Assets/Scenes/NetworkDemo.unity";
     private const string Stage2Path = "Assets/Scenes/Stage2_Campground.unity";
+    private const string Stage3Path = "Assets/Scenes/Stage3_CursedFortress.unity";
     private const string PlayerPrefabPath = "Assets/Prefabs/NetworkPlayer.prefab";
+    private const string FrozenTunaPrefabPath = "Assets/Prefabs/Weapons/Frozen_Tuna.prefab";
 
     private const string LobbySceneName = "Lobby";
 
     /// <summary>대기실에서 인원이 다 모이면 출발할 게임 씬.</summary>
-    private const string FirstStageScene = "Stage2_Campground";
+    private const string FirstStageScene = "Stage3_CursedFortress";
 
     /// <summary>방 정원의 기본값. 호스트가 대기실에서 Tab을 눌러 바꿀 수 있다.</summary>
     private const int DefaultTargetPlayers = 4;
@@ -57,7 +59,7 @@ public static class LobbyBuilder
     private static Material matWood, matWoodDark, matMetal, matDark;
     private static Material matFlame, matEmber, matGlass;
     private static Material matLeaf, matLeafDark, matLeafLight;
-    private static Material matAccent, matTent, matTuna, matStraw;
+    private static Material matAccent, matTent, matStraw;
 
     [MenuItem("Tools/Lobby/Build Lobby")]
     public static void BuildLobby()
@@ -108,7 +110,7 @@ public static class LobbyBuilder
 
         Debug.Log("[Lobby] 대기실 씬 생성 완료: " + LobbyPath +
                   "\n- 타이틀에서 호스트/참가하면 대기실로 들어갑니다." +
-                  "\n- 정원이 다 차면 " + FirstStageScene + " 으로 출발합니다 (호스트가 Tab으로 정원 조절)." +
+                  "\n- 호스트가 플레이할 스테이지를 고르고, 정원이 다 차면 출발합니다 (Tab으로 정원 조절)." +
                   "\n- 배치를 바꾸려면 이 파일의 좌표를 고치고 다시 실행하세요.");
     }
 
@@ -303,19 +305,22 @@ public static class LobbyBuilder
         altar.Configure(tuna.GetComponent<Weapon>());
     }
 
-    /// <summary>무기로 쓸 수 있는 냉동참치.</summary>
+    /// <summary>무기 에셋의 냉동참치 프리팹을 배치한다.</summary>
     private static Transform FrozenTuna(Transform parent, Vector3 localPos, float rotY)
     {
-        Transform g = Group(parent, "FrozenTuna", localPos, rotY);
-        Prim(g, "Body", PrimitiveType.Sphere, new Vector3(0f, 0.13f, 0.02f), new Vector3(0.22f, 0.26f, 0.6f), matTuna);
-        Box(g, "Tail", new Vector3(0f, 0.13f, -0.36f), new Vector3(0.04f, 0.3f, 0.12f), matTuna);
-        Box(g, "FinTop", new Vector3(0f, 0.29f, 0.05f), new Vector3(0.03f, 0.1f, 0.15f), matTuna);
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(FrozenTunaPrefabPath);
+        if (prefab == null)
+            throw new MissingReferenceException("냉동참치 프리팹을 찾을 수 없습니다: " + FrozenTunaPrefabPath);
 
-        var w = g.gameObject.AddComponent<Weapon>();
-        w.SetDisplayName("냉동참치");
-        w.holdPosition = new Vector3(0f, -0.05f, -0.05f);
-        w.holdEuler = new Vector3(-75f, 0f, 0f);
-        return g;
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        instance.name = "FrozenTuna";
+
+        Weapon weapon = instance.GetComponent<Weapon>();
+        float lift = weapon != null ? weapon.groundOffset : 0f;
+        instance.transform.localPosition = localPos + Vector3.up * lift;
+        instance.transform.localRotation = Quaternion.Euler(0f, rotY, 0f);
+        instance.transform.localScale = Vector3.one;
+        return instance.transform;
     }
 
     /// <summary>
@@ -561,7 +566,7 @@ public static class LobbyBuilder
         light.color = new Color(1f, 0.6f, 0.25f);
         light.range = 13f;
         light.intensity = 2.6f;
-        light.shadows = LightShadows.Soft;
+        light.shadows = LightShadows.None; // 점광원 그림자는 큐브맵 6장을 써서 아틀라스를 과점유한다.
 
         // 둘러앉는 통나무
         for (int i = 0; i < 4; i++)
@@ -696,6 +701,9 @@ public static class LobbyBuilder
         manager.playerPrefab = playerPrefab;
         manager.autoCreatePlayer = true;
         manager.playerSpawnMethod = PlayerSpawnMethod.RoundRobin;
+        manager.offlineScene = "MainTitle";
+        manager.disconnectInactiveConnections = true;
+        manager.disconnectInactiveTimeout = 60f;
         // 실제 정원은 호스트가 대기실 옵션에서 정하고 LobbyManager가 이 값을 덮어쓴다.
         manager.maxConnections = MaxPlayers;
         EditorUtility.SetDirty(manager);
@@ -758,7 +766,7 @@ public static class LobbyBuilder
     }
 
     /// <summary>
-    /// Build Settings를 실제로 쓰는 세 씬만 남긴다: 타이틀 → 대기실 → 캠핑장.
+    /// Build Settings를 실제로 쓰는 네 씬만 남긴다: 타이틀 → 대기실 → 성채 → 캠핑장.
     ///
     /// NetworkDemo·Demo·SampleScene은 개발 초기의 실험용이라 빌드에 넣지 않는다.
     /// 파일은 그대로 두므로 필요하면 에디터에서 직접 열어 볼 수 있다.
@@ -768,6 +776,7 @@ public static class LobbyBuilder
         var order = new List<string>();
         if (System.IO.File.Exists(TitlePath)) order.Add(TitlePath);
         order.Add(LobbyPath);
+        if (System.IO.File.Exists(Stage3Path)) order.Add(Stage3Path);
         if (System.IO.File.Exists(Stage2Path)) order.Add(Stage2Path);
 
         EditorBuildSettings.scenes = order
@@ -921,9 +930,6 @@ public static class LobbyBuilder
         matTent = GetMat("Camp_Tent", new Color(0.2f, 0.45f, 0.6f));
         matStraw = GetMat("Lobby_Straw", new Color(0.82f, 0.72f, 0.38f));
 
-        // 참치는 캠핑장의 것과 같은 색을 쓴다.
-        var houseTuna = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/House_Tuna.mat");
-        matTuna = houseTuna != null ? houseTuna : GetMat("Lobby_Tuna", new Color(0.55f, 0.65f, 0.72f));
     }
 
     private static Material GetMat(string assetName, Color color) => BuilderMaterials.Ensure(assetName, color);

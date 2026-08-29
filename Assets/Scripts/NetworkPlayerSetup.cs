@@ -1,5 +1,6 @@
 using Mirror;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(PlayerController))]
 public class NetworkPlayerSetup : NetworkBehaviour
@@ -34,6 +35,8 @@ public class NetworkPlayerSetup : NetworkBehaviour
     {
         CacheComponents();
         EnsureRemoteAvatar();
+        if (GetComponent<PlayerFootstepAudio>() == null)
+            gameObject.AddComponent<PlayerFootstepAudio>();
     }
 
     private void Start()
@@ -62,13 +65,16 @@ public class NetworkPlayerSetup : NetworkBehaviour
     {
         ApplyLocalState(true);
         TryStartVoice();
+        GameHud.Ensure().ShowToast("[V] 누르는 동안 음성 송신 · [M] 음소거 · [F10] 세션 나가기", 6f,
+            new Color(0.65f, 0.9f, 1f));
     }
 
     public override void OnStopClient()
     {
         if (proximityVoice != null)
             proximityVoice.StopVoice();
-        ApplyLocalState(true);
+        // 파괴되기 직전 원격 플레이어의 카메라/리스너까지 켜면 한 프레임 동안 중복 리스너가 생긴다.
+        ApplyLocalState(false);
     }
 
     private void OnVoiceChannelChanged(string oldChannel, string newChannel)
@@ -102,7 +108,21 @@ public class NetworkPlayerSetup : NetworkBehaviour
 
     private void Update()
     {
-        if (!isLocalPlayer || playerController == null)
+        if (!isLocalPlayer)
+            return;
+
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard != null && keyboard.f10Key.wasPressedThisFrame)
+        {
+            if (NetworkManager.singleton != null)
+            {
+                if (NetworkServer.active) NetworkManager.singleton.StopHost();
+                else if (NetworkClient.active) NetworkManager.singleton.StopClient();
+            }
+            return;
+        }
+
+        if (playerController == null)
             return;
 
         float pitch = playerController.Pitch;

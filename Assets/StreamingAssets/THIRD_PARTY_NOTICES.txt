@@ -1,0 +1,79 @@
+STAB IN THE BACK - THIRD-PARTY NOTICES
+======================================
+
+This distribution contains third-party software, fonts, and audio listed below.
+
+
+1. Mirror Networking
+--------------------
+
+MIT License
+
+Copyright (c) 2015, Unity Technologies
+Copyright (c) 2019, Mischa, Paul, Chris, Robin, Stephen and Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+
+2. Yeogi Eottae Jalnan 2 Font (여기어때 잘난체 2)
+--------------------------------------------------
+
+Copyright / intellectual property owner: (주)여기어때컴퍼니
+Font designer: Sandoll Inc.
+Official license page: https://www.sandollcloud.com/free-font/19492/get-started
+
+라이선스 원문
+
+- ‘여기어때 잘난체’는 여기어때에서 배포하는 글꼴(잘난체·잘난체2·잘난체 고딕)이 모두 포함된 명칭으로,
+  '여기어때 잘난체'의 지적재산권은 ㈜여기어때컴퍼니가 소유하고 있습니다.
+- ‘여기어때 잘난체’는 개인 및 기업 사용자를 포함한 모든 사용자에게 무료로 제공되며 자유롭게 사용할 수 있습니다.
+- '여기어때 잘난체' 글꼴 자체를 유료로 판매하거나 어떠한 형태로든 임의 수정/개작하여
+  글꼴을 재배포 하는 것은 금지합니다.
+- ‘여기어때 잘난체’는 인쇄물, 광고물(온/오프라인), 상품, CI/BI 등 상업적 목적으로 사용할 수 있습니다.
+  ① 글꼴 그대로의 사용을 권장하며, 형태 변환이 필요할 경우 글꼴의 조형성을 해치지 않는 범위 내에서 간단한 변형이 가능합니다.
+  ② 상품에 사용 시 여기어때 잘난체 라이선스 혹은 출처 표기를 권장합니다.
+  ③ CI/BI에 사용 시 상표권 등록은 불가합니다.
+- ‘여기어때 잘난체’는 본 저작권 안내와 라이선스 전문을 포함해서 다른 소프트웨어에 임베딩 또는 번들하여 판매하거나 재배포가 가능합니다.
+  임베딩 된 폰트는 별도 판매 불가합니다.
+- '여기어때 잘난체' 사용 시 라이선스 전문을 포함하기 어려울 경우 ‘여기어때 잘난체’의 출처 표기를 권장합니다.
+  예) 이 상품에는 ㈜여기어때컴퍼니가 제공한 여기어때 잘난체·잘난체 고딕이 적용되어 있습니다.
+- ‘여기어때 잘난체’를 사용한 인쇄물, 광고물(온/오프라인), 상품, CI/BI 등의 이미지는 여기어때의
+  마케팅을 위해 활용될 수 있습니다. 이를 원치 않는 사용자는 언제든지 당사에 요청하실 수 있습니다.
+
+
+3. Audio released under CC0 1.0
+--------------------------------
+
+The following audio is dedicated to the public domain under Creative Commons
+CC0 1.0. License text: https://creativecommons.org/publicdomain/zero/1.0/
+
+Kenney RPG Audio
+Source: https://kenney.nl/assets/rpg-audio
+Files used: footstep00/03/06/09.ogg, knifeSlice.ogg, knifeSlice2.ogg,
+chop.ogg, metalClick.ogg, doorOpen_2.ogg, doorClose_2.ogg,
+metalLatch.ogg, creak2.ogg. Local filenames were changed for in-game use.
+
+Kenney UI Audio
+Source: https://kenney.nl/assets/ui-audio
+File used: click3.ogg. The local filename was changed for in-game use.
+
+Fire Crackling by AntumDeluge
+Source: https://opengameart.org/content/fire-crackling
+Permanent page: https://opengameart.org/node/16327
+File used: fire-1.wav. The local filename was changed for in-game use.

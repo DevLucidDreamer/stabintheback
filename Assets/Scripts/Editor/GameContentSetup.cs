@@ -12,7 +12,7 @@ using UnityEngine;
 ///     래그돌 빌더가 같은 뼈대에서 시체를 만들 수 있다.
 ///  4) 씬을 갈아엎는 작업은 프리팹이 다 끝난 뒤에 한다.
 ///  5) 대기실을 <b>마지막</b>에 만든다 — 대기실 빌더가 타이틀 연결과
-///     Build Settings 순서(타이틀 → 대기실 → 캠핑장)를 정리하기 때문이다.
+///     Build Settings 순서(타이틀 → 대기실 → 성채 → 캠핑장)를 정리하기 때문이다.
 ///
 /// 메뉴: Tools > Setup > Build Everything
 /// </summary>
@@ -30,7 +30,8 @@ public static class GameContentSetup
             "4. 래그돌 시체 프리팹\n" +
             "5. 타이틀 화면\n" +
             "6. 캠핑장 씬 (Stage2_Campground)\n" +
-            "7. 대기실 씬 (Lobby) + Build Settings 정리\n\n" +
+            "7. 협동 탈출 성채 (Stage3_CursedFortress)\n" +
+            "8. 대기실 씬 (Lobby) + Build Settings 정리\n\n" +
             "씬을 새로 만들기 때문에 현재 씬에서 손으로 고쳐 둔 것은 사라집니다.\n" +
             "계속할까요?",
             "실행", "취소");
@@ -47,10 +48,11 @@ public static class GameContentSetup
 
         TitleSceneSetup.SetupMainTitle();
         Stage2Builder.BuildStage2();
+        Stage3FortressBuilder.BuildStage3();
         LobbyBuilder.BuildLobby();
 
         Debug.Log("[Setup] 전체 생성 완료.\n" +
-                  "타이틀 → 대기실 → 캠핑장 순서로 Build Settings가 정리되었습니다.\n" +
+                  "타이틀 → 대기실 → 성채/캠핑장 순서로 Build Settings가 정리되었습니다.\n" +
                   "MainTitle 씬을 열고 플레이하면 처음부터 확인할 수 있습니다.");
     }
 

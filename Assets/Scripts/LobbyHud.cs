@@ -28,6 +28,7 @@ public class LobbyHud : MonoBehaviour
     private GameObject optionsRoot;
     private TextMeshProUGUI valueLabel;
     private TextMeshProUGUI noteLabel;
+    private TextMeshProUGUI stageLabel;
     private Button minusButton;
     private Button plusButton;
 
@@ -60,7 +61,7 @@ public class LobbyHud : MonoBehaviour
 
         string code = lobby.RoomCodeText();
         hud.SetTopLeft(string.IsNullOrEmpty(code) ? string.Empty : $"방 코드\n<size=140%><b>{code}</b></size>");
-        hud.SetTopRight($"인원  {lobby.PlayerCount} / {lobby.TargetPlayers}");
+        hud.SetTopRight($"{lobby.SelectedStageName}\n인원  {lobby.PlayerCount} / {lobby.TargetPlayers}");
 
         int left = lobby.CountdownSecondsLeft;
         if (left >= 0)
@@ -105,6 +106,8 @@ public class LobbyHud : MonoBehaviour
             return;
 
         valueLabel.text = lobby.TargetPlayers.ToString();
+        if (stageLabel != null)
+            stageLabel.text = lobby.SelectedStageName;
 
         // 이미 들어와 있는 인원보다 적게는 내릴 수 없다.
         int lowest = Mathf.Max(lobby.MinPlayers, lobby.PlayerCount);
@@ -143,27 +146,34 @@ public class LobbyHud : MonoBehaviour
         backdrop.offsetMin = Vector2.zero;
         backdrop.offsetMax = Vector2.zero;
 
-        RectTransform panel = Panel(root, "OptionsPanel", new Vector2(640f, 380f), Vector2.zero, PanelBg);
+        RectTransform panel = Panel(root, "OptionsPanel", new Vector2(680f, 500f), Vector2.zero, PanelBg);
 
         Label(panel, "Title", "방 옵션", 44f, Gold, TextAlignmentOptions.Center,
-            new Vector2(600f, 60f), new Vector2(0f, 132f));
+            new Vector2(620f, 60f), new Vector2(0f, 190f));
+
+        Label(panel, "StageTitle", "플레이할 스테이지", 26f, Dim, TextAlignmentOptions.Left,
+            new Vector2(260f, 44f), new Vector2(-160f, 120f));
+        stageLabel = Label(panel, "StageValue", lobby.SelectedStageName, 28f, Ink, TextAlignmentOptions.Center,
+            new Vector2(270f, 52f), new Vector2(90f, 120f));
+        MakeButton(panel, "ChangeStage", "변경", new Vector2(110f, 52f), new Vector2(255f, 120f),
+            () => lobby.RequestCycleStage());
 
         Label(panel, "TargetLabel", "정원 (명)", 30f, Ink, TextAlignmentOptions.Left,
-            new Vector2(240f, 50f), new Vector2(-160f, 44f));
+            new Vector2(240f, 50f), new Vector2(-160f, 38f));
 
-        minusButton = MakeButton(panel, "Minus", "−", new Vector2(70f, 70f), new Vector2(30f, 44f),
+        minusButton = MakeButton(panel, "Minus", "−", new Vector2(70f, 70f), new Vector2(30f, 38f),
             () => lobby.RequestTargetPlayers(lobby.TargetPlayers - 1));
 
         valueLabel = Label(panel, "Value", "4", 46f, Color.white, TextAlignmentOptions.Center,
-            new Vector2(110f, 70f), new Vector2(125f, 44f));
+            new Vector2(110f, 70f), new Vector2(125f, 38f));
 
-        plusButton = MakeButton(panel, "Plus", "+", new Vector2(70f, 70f), new Vector2(220f, 44f),
+        plusButton = MakeButton(panel, "Plus", "+", new Vector2(70f, 70f), new Vector2(220f, 38f),
             () => lobby.RequestTargetPlayers(lobby.TargetPlayers + 1));
 
         noteLabel = Label(panel, "Note", string.Empty, 22f, Dim, TextAlignmentOptions.Center,
-            new Vector2(560f, 80f), new Vector2(0f, -42f));
+            new Vector2(600f, 80f), new Vector2(0f, -72f));
 
-        MakeButton(panel, "Close", "닫기", new Vector2(180f, 58f), new Vector2(0f, -140f),
+        MakeButton(panel, "Close", "닫기", new Vector2(180f, 58f), new Vector2(0f, -190f),
             () => lobby.CloseOptions());
     }
 

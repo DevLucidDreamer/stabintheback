@@ -23,7 +23,7 @@ The title scene has **no** NetworkManager. Buttons store the intent in a static 
 `Tools > Title > Setup Main Title`:
 1. Adds `NetworkAutoLaunch` to `NetworkBootstrap` in NetworkDemo and saves it.
 2. Creates `Assets/Scenes/MainTitle.unity` with a clean uGUI menu (title, IP field, Host/Join/Quit) + EventSystem (Input System UI module) + a background camera.
-3. Sets Build Settings order to **[MainTitle, NetworkDemo, (Stage2)]** so the game boots at the title.
+3. Sets Build Settings order to **[MainTitle, Lobby, Stage3_CursedFortress, Stage2_Campground]** so the game boots at the title and both modes are included.
 
 ## Test
 

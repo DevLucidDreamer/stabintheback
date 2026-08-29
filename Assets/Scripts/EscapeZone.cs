@@ -10,6 +10,7 @@ using UnityEngine;
 /// 이 컴포넌트를 두지 않는다. 목표가 다른 스테이지를 붙일 때 쓰는 범용 부품이다.
 /// </summary>
 [RequireComponent(typeof(NetworkIdentity))]
+[RequireComponent(typeof(Collider))]
 public class EscapeZone : NetworkBehaviour
 {
     [Tooltip("전환할 다음 씬 이름(Build Settings에 포함되어야 함). 비우면 loop 옵션에 따라 시작 씬으로")]
@@ -44,15 +45,18 @@ public class EscapeZone : NetworkBehaviour
     }
 
     [Command(requiresAuthority = false)]
-    private void CmdTryEscape()
+    private void CmdTryEscape(NetworkConnectionToClient sender = null)
     {
-        if (serverTransitioning || !GoalReached())
+        Collider area = GetComponent<Collider>();
+        if (serverTransitioning || !GoalReached() || !ServerInteractionGuard.IsInside(sender, area))
             return;
 
         string target = nextSceneName;
         if (string.IsNullOrEmpty(target) && loopToStartIfEmpty)
             target = startSceneName;
         if (string.IsNullOrEmpty(target))
+            return;
+        if (NetworkManager.singleton == null)
             return;
 
         serverTransitioning = true;

@@ -33,6 +33,8 @@ public class CollectibleItem : Interactable
         if (game == null)
         {
             // 매니저가 없는 씬(대기실 등)에서는 그냥 사라지기만 한다.
+            GameAudio.PlayAt("pickup", transform.position, 0.26f,
+                Random.Range(0.98f, 1.08f), 1.2f, 9f);
             gameObject.SetActive(false);
             return;
         }
@@ -40,6 +42,8 @@ public class CollectibleItem : Interactable
         if (!game.IsGathering)
             return; // 노을이 진 뒤에는 더 줍지 않는다
 
+        GameAudio.PlayAt("pickup", transform.position, 0.26f,
+            Random.Range(0.98f, 1.08f), 1.2f, 9f);
         game.RequestCollect(itemId);
     }
 }

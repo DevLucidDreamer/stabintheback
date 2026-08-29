@@ -23,12 +23,15 @@ public class WeaponNetworkManager : NetworkBehaviour
     [SerializeField] private float lethalRadius = 1.0f;
     [Tooltip("클릭 후 실제 타격까지 지연(내려치기 타이밍과 맞춤, 초)")]
     [SerializeField] private float strikeDelay = 0.18f;
+    [Tooltip("서버가 허용하는 최소 스윙 간격(초). 변조 클라이언트의 연타를 막는다")]
+    [SerializeField, Min(0.1f)] private float swingCooldown = 0.45f;
 
     private readonly Dictionary<int, Weapon> registry = new Dictionary<int, Weapon>();
 
     // 서버 전용
     private readonly Dictionary<int, uint> heldBy = new Dictionary<int, uint>();          // weaponId → 소지자 netId(0=자유)
     private readonly Dictionary<int, (Vector3 pos, Vector3 euler)> freePose = new Dictionary<int, (Vector3, Vector3)>();
+    private readonly Dictionary<uint, double> nextSwingAt = new Dictionary<uint, double>();
 
     private void Awake()
     {
@@ -51,6 +54,7 @@ public class WeaponNetworkManager : NetworkBehaviour
         BuildRegistry();
         heldBy.Clear();
         freePose.Clear();
+        nextSwingAt.Clear();
         foreach (var kv in registry)
         {
             heldBy[kv.Key] = 0;
@@ -109,6 +113,12 @@ public class WeaponNetworkManager : NetworkBehaviour
         if (heldBy.TryGetValue(weaponId, out uint cur) && cur != 0)
             return; // 이미 누가 들고 있음
 
+        Vector3 weaponPosition = freePose.TryGetValue(weaponId, out var pose)
+            ? pose.pos
+            : registry[weaponId].transform.position;
+        if (!ServerInteractionGuard.IsNear(sender, weaponPosition))
+            return;
+
         uint holder = sender.identity.netId;
 
         // 이 플레이어가 이미 다른 무기를 들고 있으면 먼저 내려놓게 한다.
@@ -133,9 +143,15 @@ public class WeaponNetworkManager : NetworkBehaviour
         if (!heldBy.TryGetValue(weaponId, out uint cur) || cur != sender.identity.netId)
             return; // 소지자만 버릴 수 있음
 
+        Transform player = sender.identity.transform;
+        Vector3 safePos = player.position + Vector3.up + player.forward * 0.7f;
+        if (ServerInteractionGuard.IsFinite(pos) && (pos - player.position).sqrMagnitude <= 9f)
+            safePos = pos;
+        Vector3 safeEuler = ServerInteractionGuard.IsFinite(euler) ? euler : Vector3.zero;
+
         heldBy[weaponId] = 0;
-        freePose[weaponId] = (pos, euler);
-        RpcFree(weaponId, sender.identity.netId, pos, euler);
+        freePose[weaponId] = (safePos, safeEuler);
+        RpcFree(weaponId, sender.identity.netId, safePos, safeEuler);
     }
 
     [Command(requiresAuthority = false)]
@@ -145,11 +161,15 @@ public class WeaponNetworkManager : NetworkBehaviour
             return;
 
         uint attacker = sender.identity.netId;
+        if (HeldWeaponOf(attacker) < 0)
+            return;
+        if (nextSwingAt.TryGetValue(attacker, out double next) && NetworkTime.time < next)
+            return;
+        nextSwingAt[attacker] = NetworkTime.time + swingCooldown;
         RpcSwing(attacker); // 모든 클라에서 스윙 애니메이션
 
-        // 무기를 든 사람만 살상 가능. 내려치는 타이밍에 판정.
-        if (HeldWeaponOf(attacker) >= 0)
-            StartCoroutine(DelayedKill(attacker));
+        // 내려치는 타이밍에 서버가 소지 여부와 공격 판정을 다시 확인한다.
+        StartCoroutine(DelayedKill(attacker));
     }
 
     private IEnumerator DelayedKill(uint attackerNetId)
@@ -212,6 +232,9 @@ public class WeaponNetworkManager : NetworkBehaviour
         return -1;
     }
 
+    [Server]
+    public bool ServerPlayerHasWeapon(uint holderNetId) => HeldWeaponOf(holderNetId) >= 0;
+
     // ------------------------------------------------------------ 클라이언트 반영
 
     [ClientRpc]
@@ -248,6 +271,9 @@ public class WeaponNetworkManager : NetworkBehaviour
     [Command(requiresAuthority = false)]
     private void CmdRequestSync(NetworkConnectionToClient sender = null)
     {
+        if (sender == null)
+            return;
+
         int[] ids = registry.Keys.ToArray();
         uint[] holders = new uint[ids.Length];
         Vector3[] positions = new Vector3[ids.Length];

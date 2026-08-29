@@ -18,13 +18,13 @@ using UnityEngine;
 /// 실제 UI 동작은 MainMenu.cs가 이름으로 계층을 찾아 연결한다 —
 /// 오브젝트 이름을 바꾸면 MainMenu의 문자열도 같이 고쳐야 한다.
 ///
-/// Build Settings 순서도 [MainTitle, Lobby, NetworkDemo, Stage2]로 맞춘다.
+/// Build Settings 순서도 [MainTitle, Lobby, Stage3, Stage2]로 맞춘다.
 /// </summary>
 public static class TitleSceneSetup
 {
     private const string TitlePath = "Assets/Scenes/MainTitle.unity";
     private const string LobbyPath = "Assets/Scenes/Lobby.unity";
-    private const string DemoPath = "Assets/Scenes/NetworkDemo.unity";
+    private const string Stage3Path = "Assets/Scenes/Stage3_CursedFortress.unity";
     private const string Stage2Path = "Assets/Scenes/Stage2_Campground.unity";
 
     /// <summary>모닥불 자리. 캐릭터가 돌아다니는 중심이자 화면 구도의 기준점.</summary>
@@ -54,7 +54,6 @@ public static class TitleSceneSetup
 
         // 타이틀에서 넘어온 의도(호스트/참가)를 실행할 씬들에 자동 시작 + 방 알림을 보장한다.
         EnsureLaunchWiring(LobbyPath);
-        EnsureLaunchWiring(DemoPath);
 
         // 새 씬을 만들기 전에 끝내 둘 것들 — 둘 다 재임포트/애셋 생성을 일으킨다.
         TMPro.TMP_FontAsset font = JalnanFontAssetBuilder.Ensure();
@@ -759,15 +758,12 @@ public static class TitleSceneSetup
     {
         var order = new List<string> { TitlePath };
         if (System.IO.File.Exists(LobbyPath)) order.Add(LobbyPath);
-        if (System.IO.File.Exists(DemoPath)) order.Add(DemoPath);
+        if (System.IO.File.Exists(Stage3Path)) order.Add(Stage3Path);
         if (System.IO.File.Exists(Stage2Path)) order.Add(Stage2Path);
 
-        var scenes = order.Select(path => new EditorBuildSettingsScene(path, true)).ToList();
-        foreach (EditorBuildSettingsScene s in EditorBuildSettings.scenes)
-            if (!order.Contains(s.path))
-                scenes.Add(s);
-
-        EditorBuildSettings.scenes = scenes.ToArray();
+        EditorBuildSettings.scenes = order
+            .Select(path => new EditorBuildSettingsScene(path, true))
+            .ToArray();
     }
 }
 #endif

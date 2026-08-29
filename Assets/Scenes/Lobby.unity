@@ -10677,11 +10677,11 @@ MonoBehaviour:
   transport: {fileID: 250065579}
   networkAddress: localhost
   maxConnections: 8
-  disconnectInactiveConnections: 0
+  disconnectInactiveConnections: 1
   disconnectInactiveTimeout: 60
   exceptionsDisconnect: 1
   authenticator: {fileID: 0}
-  offlineScene: 
+  offlineScene: MainTitle
   onlineScene: 
   offlineSceneLoadDelay: 0
   playerPrefab: {fileID: 7961999844373101444, guid: 2e771352c34254f42a962545b976e9a5, type: 3}
@@ -24912,7 +24912,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &621277326
 Transform:
   m_ObjectHideFlags: 0
@@ -24950,7 +24950,78 @@ MonoBehaviour:
   swingRadius: 1
   groundClearance: 0.03
   groundOffset: 0.05
-  weaponId: 0
+  weaponId: -1
+--- !u!1001 &621277328
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1107131557}
+    m_Modifications:
+    - target: {fileID: 1593846177533744318, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_Name
+      value: FrozenTuna
+      objectReference: {fileID: 0}
+    - target: {fileID: 7659259320853444758, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: weaponId
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.2490138
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+--- !u!4 &621277329 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7678999510133358556, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+  m_PrefabInstance: {fileID: 621277328}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &621277330 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7659259320853444758, guid: 124e6eae9eb6631429b37ce8b7dc63dc, type: 3}
+  m_PrefabInstance: {fileID: 621277328}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &622003109
 GameObject:
   m_ObjectHideFlags: 0
@@ -44116,6 +44187,7 @@ Transform:
   - {fileID: 2093820092}
   - {fileID: 97904220}
   - {fileID: 621277326}
+  - {fileID: 621277329}
   - {fileID: 495768934}
   m_Father: {fileID: 890359915}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -44131,7 +44203,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8ff6d444b2e9bb47880e26f64c66655, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LobbyAltar
-  sword: {fileID: 621277327}
+  sword: {fileID: 621277330}
   pickedUpText: "\uB0C9\uB3D9\uCC38\uCE58\uB97C \uC190\uC5D0 \uB123\uC5C8\uB2E4!"
   announceSeconds: 2.4
 --- !u!1 &1109203616
@@ -49481,7 +49553,7 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
-    m_Type: 2
+    m_Type: 0
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -69396,7 +69468,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  firstStageScene: Stage2_Campground
+  firstStageScene: Stage3_CursedFortress
   countdownSeconds: 5
   minPlayers: 1
   maxPlayers: 8
@@ -76423,6 +76495,7 @@ MonoBehaviour:
   lethalReach: 1.4
   lethalRadius: 1
   strikeDelay: 0.18
+  swingCooldown: 0.45
 --- !u!114 &1986165704
 MonoBehaviour:
   m_ObjectHideFlags: 0

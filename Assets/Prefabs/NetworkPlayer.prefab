@@ -976,8 +976,9 @@ MonoBehaviour:
   fadeModel: 1
   allowStereoPanning: 1
   positionUpdateInterval: 0.1
-  pushToTalk: 0
+  pushToTalk: 1
   pushToTalkKey: 36
+  muteToggleKey: 27
 --- !u!114 &1251604038556726830
 MonoBehaviour:
   m_ObjectHideFlags: 0
