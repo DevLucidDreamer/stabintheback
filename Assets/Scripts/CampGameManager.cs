@@ -125,6 +125,7 @@ public class CampGameManager : NetworkBehaviour
 
     private readonly Dictionary<int, CollectibleItem> registry = new Dictionary<int, CollectibleItem>();
     private readonly HashSet<int> collectedIds = new HashSet<int>(); // 서버 권한
+    private readonly Dictionary<uint, double> nextInteractionAt = new Dictionary<uint, double>();
 
     private bool serverChangingScene;
     private int lastSignature = int.MinValue;
@@ -211,6 +212,7 @@ public class CampGameManager : NetworkBehaviour
         ClearSlots();
 
         collectedIds.Clear();
+        nextInteractionAt.Clear();
         serverChangingScene = false;
 
         phase = (int)CampPhase.Gathering;
@@ -254,14 +256,16 @@ public class CampGameManager : NetworkBehaviour
     }
 
     [Command(requiresAuthority = false)]
-    private void CmdCollect(int id)
+    private void CmdCollect(int id, NetworkConnectionToClient sender = null)
     {
         if (phase != (int)CampPhase.Gathering)
             return; // 노을이 진 뒤에는 더 줍지 않는다
-        if (!collectedIds.Add(id))
-            return; // 이미 누가 가져갔다
         if (!registry.TryGetValue(id, out CollectibleItem item) || item == null)
             return;
+        if (!ServerInteractionGuard.IsNear(sender, item.transform.position) || !ConsumeInteraction(sender))
+            return;
+        if (!collectedIds.Add(id))
+            return; // 이미 누가 가져갔다
 
         // 종류는 서버가 씬에서 직접 읽는다(클라이언트가 불러 주는 값을 믿지 않는다).
         Add(item.Kind, 1);
@@ -276,7 +280,10 @@ public class CampGameManager : NetworkBehaviour
 
     [Command(requiresAuthority = false)]
     private void CmdRequestSync(NetworkConnectionToClient sender = null)
-        => TargetSync(sender, collectedIds.ToArray(), slotKind, slotPlacedAt);
+    {
+        if (sender != null)
+            TargetSync(sender, collectedIds.ToArray(), slotKind, slotPlacedAt);
+    }
 
     [TargetRpc]
     private void TargetSync(NetworkConnectionToClient target, int[] collected, int[] kinds, double[] times)
@@ -303,8 +310,11 @@ public class CampGameManager : NetworkBehaviour
     }
 
     [Command(requiresAuthority = false)]
-    private void CmdLoadFirewood()
+    private void CmdLoadFirewood(NetworkConnectionToClient sender = null)
     {
+        Firepit firepit = FindFirstObjectByType<Firepit>();
+        if (firepit == null || !ServerInteractionGuard.IsNear(sender, firepit.transform.position) || !ConsumeInteraction(sender))
+            return;
         if (CanLoadFirewood())
             firewoodLoaded++;
     }
@@ -402,10 +412,25 @@ public class CampGameManager : NetworkBehaviour
     }
 
     [Command(requiresAuthority = false)]
-    private void CmdGrillInteract()
+    private void CmdGrillInteract(NetworkConnectionToClient sender = null)
     {
+        BarbecueGrill grill = FindFirstObjectByType<BarbecueGrill>();
+        if (grill == null || !ServerInteractionGuard.IsNear(sender, grill.transform.position) || !ConsumeInteraction(sender))
+            return;
         if (ServerGrillInteract())
             RpcSlots(slotKind, slotPlacedAt);
+    }
+
+    [Server]
+    private bool ConsumeInteraction(NetworkConnectionToClient sender, double cooldown = 0.12d)
+    {
+        if (sender?.identity == null)
+            return false;
+        uint id = sender.identity.netId;
+        if (nextInteractionAt.TryGetValue(id, out double next) && NetworkTime.time < next)
+            return false;
+        nextInteractionAt[id] = NetworkTime.time + cooldown;
+        return true;
     }
 
     /// <summary>

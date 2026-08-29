@@ -75,7 +75,9 @@ public class MainMenu : MonoBehaviour
         Wire("BackFromOptions", ShowTitle);
 
         Wire("KoreanButton", () => SetLanguage(GameOptions.Korean));
-        Wire("EnglishButton", () => SetLanguage(GameOptions.English));
+        Button englishButton = Wire("EnglishButton", () => SetLanguage(GameOptions.Korean));
+        if (englishButton != null)
+            englishButton.gameObject.SetActive(false); // 전체 현지화 전에는 지원하지 않는 선택지를 노출하지 않는다.
 
         Slider volume = Component<Slider>("VolumeSlider");
         if (volume != null)
@@ -280,7 +282,7 @@ public class MainMenu : MonoBehaviour
     private void RefreshLanguageLabel()
     {
         if (languageValue != null)
-            languageValue.text = GameOptions.Language == GameOptions.English ? "English" : "한국어";
+            languageValue.text = "한국어";
     }
 
     private void SetStatus(string text)
@@ -302,7 +304,11 @@ public class MainMenu : MonoBehaviour
     {
         Button button = Component<Button>(childName);
         if (button != null)
-            button.onClick.AddListener(callback);
+            button.onClick.AddListener(() =>
+            {
+                GameAudio.PlayUi("ui_click", 0.28f);
+                callback?.Invoke();
+            });
         return button;
     }
 

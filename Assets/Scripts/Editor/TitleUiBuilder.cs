@@ -135,7 +135,7 @@ public static class TitleUiBuilder
         MakeButton(panel, "QuitButton", "종료", TopLeft, TopLeft,
             new Vector2(Margin, -788f), new Vector2(400f, 84f), Gray, 32f, primary: false, centerLabel: false);
 
-        MakeText(panel, "BuildNote", "Made with Unity 6 · Mirror", BottomLeft, BottomLeft,
+        MakeText(panel, "BuildNote", "v1.0.0 · Unity 6 · Mirror", BottomLeft, BottomLeft,
             new Vector2(Margin, 44f), new Vector2(700f, 36f), 20f, new Color(0.6f, 0.62f, 0.66f), TextAlignmentOptions.Left);
     }
 
@@ -239,7 +239,7 @@ public static class TitleUiBuilder
         // 만든 사람
         RectTransform credit = FullPanel(card, "CreditContent");
         MakeText(credit, "CreditText",
-            "STAB IN THE BACK\n캠핑장에서 벌어지는 배신 파티게임\n\nMade with Unity 6 · Mirror",
+            "STAB IN THE BACK\n캠핑장에서 벌어지는 배신 파티게임\n\nv1.0.0 · Unity 6 · Mirror\n서드파티 고지: THIRD_PARTY_NOTICES.txt",
             Middle, Middle, new Vector2(0f, 0f), new Vector2(700f, 320f), 26f, Ink, TextAlignmentOptions.Center, wrap: true);
 
         MakeButton(panel, "BackFromOptions", "뒤로", BottomCenter, BottomCenter,

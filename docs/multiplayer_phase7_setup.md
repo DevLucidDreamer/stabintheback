@@ -58,8 +58,8 @@ Hold poses are baked into the prefab — tweak `holdPosition` / `holdEuler` in t
 - **Tab** opens the 방 옵션 panel. It only opens when `NetworkServer.active`, i.e. for the host; guests get nothing. The panel calls `PlayerController.SetInputPaused(true)` — **not** `SetInputEnabled(false)`, which would stop `CharacterController.Move()` and make the player sink through the floor. `OnDisable` restores input so leaving the lobby with the panel open can't strand you.
 - Lowering the cap below the number of people already connected is blocked.
 - Changing the cap writes both `NetworkManager.singleton.maxConnections` *and* `NetworkServer.maxConnections` — the latter is a separate copy taken at `Listen()`, so changing only the manager has no effect on a server that is already running.
-- Countdown starts **only** when the room is full (`playerCount >= targetPlayers`), then `ServerChangeScene(firstStageScene)`. The ready pad is display-only; it used to also start the game, which meant a lone host standing on it counted as "everyone ready" (1/1) and left immediately regardless of the cap.
-- `firstStageScene` is now `Stage2_Campground` (was `NetworkDemo`), both in `LobbyBuilder` and in the existing `Lobby.unity`.
+- Countdown starts **only** when the room is full (`playerCount >= targetPlayers`), then the server loads the host-selected stage. The ready pad is display-only.
+- The host can cycle between `Stage3_CursedFortress` (default) and `Stage2_Campground` in the Tab options panel.
 
 Lobby spawn points went from 5 to 8 to match the cap.
 
@@ -111,7 +111,7 @@ Changed:
 - `Assets/Scripts/Editor/LobbyBuilder.cs` — campground target, 8 spawns, cap 8
 - `Assets/Scripts/Editor/Stage2Builder.cs` — real weapons, 8 spawns, loop to Lobby
 - `Assets/Scripts/Editor/PlayerAnimatorSetup.cs` — uses `GoshiModel`, wires an idle clip
-- `Assets/Scenes/Lobby.unity` — `firstStageScene: NetworkDemo`
+- `Assets/Scenes/Lobby.unity` — default stage `Stage3_CursedFortress`, host-selectable campground mode
 
 ## Manual Unity Editor steps
 
@@ -123,7 +123,7 @@ Changed:
 ## Test
 
 1. Host on `Lobby`. Press **Tab** → 방 옵션 opens, set 정원 to 2.
-2. Join with a ParrelSync clone → `Member 2/2` → 5-second countdown → both load `Stage2_Campground`.
+2. Choose a stage, then join with a ParrelSync clone → `Member 2/2` → 5-second countdown → both load the same selected stage.
 3. Guest presses Tab → nothing happens (host only).
 4. Pick up 소세지 꼬치, hit the other player → they respawn instantly and a goshi corpse flies off in the direction of the blow, flops, and sinks after ~6 s.
 5. Long weapons (당근 대검) reach noticeably further than 고무 오리.

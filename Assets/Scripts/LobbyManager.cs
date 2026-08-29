@@ -6,10 +6,11 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// 대기실 진행 관리 (서버 권한). 씬에 하나 존재하는 NetworkIdentity 오브젝트.
 ///
-/// - 호스트가 Tab을 눌러 '방 옵션'을 열고 정원(몇 명이 모이면 출발할지)을 정한다.
+/// - 호스트가 Tab을 눌러 '방 옵션'을 열고 정원과 플레이할 스테이지를 정한다.
 ///   옵션 변경은 호스트만 가능하며, 서버가 다시 한 번 검사한다.
-/// - 정한 인원이 모두 접속하고 출발 발판에 올라서면 카운트다운 후 첫 스테이지로 전환한다.
-/// - 카운트다운 중 조건이 깨지면(누가 나가거나 준비를 풀면) 즉시 취소한다.
+/// - 정한 인원이 다 모이면 카운트다운 후 선택한 게임 씬으로 전환한다.
+/// - 출발 발판은 준비 상태 표시용이며, 정원이 덜 차면 출발하지 않는다.
+/// - 카운트다운 중 인원이 빠지면 즉시 취소한다.
 /// </summary>
 [RequireComponent(typeof(NetworkIdentity))]
 public class LobbyManager : NetworkBehaviour
@@ -18,7 +19,10 @@ public class LobbyManager : NetworkBehaviour
 
     [Header("씬 전환")]
     [Tooltip("인원이 모이면 이동할 게임 씬 이름(Build Settings에 포함되어야 함)")]
-    [SerializeField] private string firstStageScene = "NetworkDemo";
+    [SerializeField] private string firstStageScene = "Stage3_CursedFortress";
+
+    private static readonly string[] StageScenes = { "Stage3_CursedFortress", "Stage2_Campground" };
+    private static readonly string[] StageNames = { "저주받은 성채", "캠핑장 바베큐" };
 
     [Tooltip("출발 조건이 갖춰진 뒤 실제 전환까지의 카운트다운(초)")]
     [SerializeField] private float countdownSeconds = 5f;
@@ -41,6 +45,7 @@ public class LobbyManager : NetworkBehaviour
     [SyncVar] private int playerCount;
     [SyncVar] private int targetPlayers = 4;                 // 이 인원이 모이면 출발
     [SyncVar] private double countdownEndsAt = -1d;          // NetworkTime.time 기준. 음수면 카운트다운 없음
+    [SyncVar] private int selectedStage;
 
     private readonly HashSet<uint> readyIds = new HashSet<uint>(); // 서버 전용
     private bool serverChangingScene;
@@ -58,6 +63,7 @@ public class LobbyManager : NetworkBehaviour
     public int TargetPlayers => targetPlayers;
     public int MinPlayers => minPlayers;
     public int MaxPlayers => maxPlayers;
+    public string SelectedStageName => StageNames[Mathf.Clamp(selectedStage, 0, StageNames.Length - 1)];
 
     /// <summary>출발까지 남은 초. 카운트다운 중이 아니면 -1.</summary>
     public int CountdownSecondsLeft
@@ -114,7 +120,7 @@ public class LobbyManager : NetworkBehaviour
             && NetworkManager.singleton != null)
         {
             serverChangingScene = true;
-            NetworkManager.singleton.ServerChangeScene(firstStageScene);
+            NetworkManager.singleton.ServerChangeScene(SelectedStageScene());
         }
     }
 
@@ -193,6 +199,23 @@ public class LobbyManager : NetworkBehaviour
         ServerRecount();
     }
 
+    /// <summary>호스트가 다음 플레이 스테이지를 순환 선택한다.</summary>
+    public void RequestCycleStage()
+    {
+        if (!NetworkServer.active)
+            return;
+        selectedStage = (selectedStage + 1) % StageScenes.Length;
+        countdownEndsAt = -1d;
+        ServerRecount();
+    }
+
+    private string SelectedStageScene()
+    {
+        int index = Mathf.Clamp(selectedStage, 0, StageScenes.Length - 1);
+        string scene = StageScenes[index];
+        return string.IsNullOrWhiteSpace(scene) ? firstStageScene : scene;
+    }
+
     /// <summary>
     /// 정원을 넘겨 들어오지 못하게 접속 상한도 같이 바꾼다.
     /// NetworkServer는 Listen() 때 받은 값을 따로 들고 있으므로, 이미 서버가 떠 있는
@@ -227,6 +250,10 @@ public class LobbyManager : NetworkBehaviour
         if (sender == null || sender.identity == null)
             return;
 
+        LobbyReadyZone zone = FindFirstObjectByType<LobbyReadyZone>();
+        if (ready && (zone == null || !ServerInteractionGuard.IsInside(sender, zone.Area)))
+            return;
+
         if (ready)
             readyIds.Add(sender.identity.netId);
         else
@@ -254,10 +281,11 @@ public class LobbyManager : NetworkBehaviour
         playerCount = total;
         readyCount = readyIds.Count;
 
-        // 접속 인원만으로 출발시키면 마지막 스테이지에서 대기실로 돌아오자마자 같은 판이
-        // 다시 시작된다. 정원이 찼고 그 인원이 모두 발판에서 준비한 경우에만 출발한다.
-        // 혼자 테스트할 때도 정원을 1로 내린 뒤 발판에 올라가야 한다.
-        bool shouldStart = total >= targetPlayers && readyCount >= targetPlayers;
+        // 출발 조건은 오직 '정한 정원이 다 찼는가' 하나다.
+        // 예전에는 "있는 사람 전원이 발판 위" 조건도 있었는데, 호스트 혼자 발판에 서면
+        // 1/1로 전원 준비가 되어 정원과 무관하게 출발해 버렸다.
+        // 발판은 이제 준비 표시 전용이고, 혼자 테스트하려면 정원을 1로 내리면 된다.
+        bool shouldStart = total > 0 && total >= targetPlayers;
 
         if (shouldStart && countdownEndsAt < 0d)
             countdownEndsAt = NetworkTime.time + countdownSeconds;

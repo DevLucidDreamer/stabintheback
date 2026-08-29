@@ -29,6 +29,7 @@ public class Firepit : Interactable
     private float litLightIntensity = 3.4f;
     private bool lit;
     private int shownLogs = -1;
+    private AudioSource fireAudio;
 
     /// <summary>빌더가 만든 부품을 연결한다.</summary>
     public void Configure(GameObject[] logParts, GameObject[] flameParts, Light light)
@@ -55,6 +56,8 @@ public class Firepit : Interactable
     {
         if (fireLight != null)
             litLightIntensity = fireLight.intensity;
+
+        fireAudio = GameAudio.CreateLoop(transform, "fire_loop", 0.28f, 1.5f, 12f);
 
         SetLit(false);
         ShowLogs(0);
@@ -113,6 +116,14 @@ public class Firepit : Interactable
         {
             fireLight.enabled = value;
             fireLight.intensity = litLightIntensity;
+        }
+
+        if (fireAudio != null)
+        {
+            if (value && !fireAudio.isPlaying)
+                fireAudio.Play();
+            else if (!value && fireAudio.isPlaying)
+                fireAudio.Stop();
         }
     }
 }

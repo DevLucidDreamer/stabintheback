@@ -13,14 +13,14 @@ public static class GameOptions
 
     public static float MasterVolume { get; private set; } = 1f;
 
-    /// <summary>선택된 표시 언어. 저장만 되고 실제 문구 교체(로컬라이즈)는 아직 미구현.</summary>
+    /// <summary>현재 지원 언어. 전체 현지화가 완료되기 전까지 한국어만 노출한다.</summary>
     public static string Language { get; private set; } = Korean;
 
     /// <summary>게임 시작 시(타이틀 화면) 한 번 호출한다.</summary>
     public static void Load()
     {
         MasterVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKey, 1f));
-        Language = PlayerPrefs.GetString(LanguageKey, Korean);
+        Language = Korean;
         Apply();
     }
 
@@ -34,7 +34,7 @@ public static class GameOptions
 
     public static void SetLanguage(string language)
     {
-        Language = language == English ? English : Korean;
+        Language = Korean;
         PlayerPrefs.SetString(LanguageKey, Language);
         PlayerPrefs.Save();
     }

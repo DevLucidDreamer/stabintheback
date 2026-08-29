@@ -190,6 +190,8 @@ public class PlayerInteraction : MonoBehaviour
             return;
         weapon.AttachTo(holdSocket);
         heldWeapon = weapon;
+        GameAudio.PlayAt("pickup", transform.position + Vector3.up, 0.28f,
+            UnityEngine.Random.Range(0.96f, 1.04f), 1.2f, 10f);
     }
 
     public void DetachWeaponVisual(Weapon weapon, Vector3 worldPos, Quaternion worldRot)
@@ -212,6 +214,9 @@ public class PlayerInteraction : MonoBehaviour
         {
             swingTimer = 0f;
             swingHitDone = false;
+            string clip = UnityEngine.Random.value < 0.5f ? "weapon_swing_01" : "weapon_swing_02";
+            GameAudio.PlayAt(clip, transform.position + Vector3.up * 1.2f, 0.34f,
+                UnityEngine.Random.Range(0.93f, 1.07f), 1.2f, 15f);
         }
     }
 
@@ -262,11 +267,14 @@ public class PlayerInteraction : MonoBehaviour
     private void DoSwingHit()
     {
         Vector3 origin = transform.position + Vector3.up * 1.2f + transform.forward * swingReach;
+        bool hitSomething = false;
 
         foreach (Collider col in Physics.OverlapSphere(origin, swingRadius))
         {
-            if (col.transform.IsChildOf(transform))
+            if (col.isTrigger || col.transform.IsChildOf(transform))
                 continue; // 자기 몸/자기 무기 제외
+
+            hitSomething = true;
 
             Rigidbody rb = col.attachedRigidbody;
             if (rb != null && !rb.isKinematic)
@@ -279,6 +287,10 @@ public class PlayerInteraction : MonoBehaviour
 
             OnSwingHit?.Invoke(this, col);
         }
+
+        if (hitSomething)
+            GameAudio.PlayAt("weapon_hit", origin, 0.42f,
+                UnityEngine.Random.Range(0.92f, 1.06f), 1.2f, 16f);
     }
 
     // ------------------------------------------------------------ HUD (조준점 + 안내)
@@ -307,8 +319,8 @@ public class PlayerInteraction : MonoBehaviour
 
         hud.SetPrompt(BuildPrompt());
         hud.SetBottom(heldWeapon == null
-            ? "[좌클릭] 줍기 · 사용    [E] 재료 목록    WASD 이동 · Space 점프"
-            : "[좌클릭] 휘두르기    [우클릭] 사용    [G] 내려놓기    [E] 재료 목록");
+            ? "[좌클릭] 줍기 · 사용  [E] 목록  [V] 음성  [M] 음소거  [F10] 나가기"
+            : "[좌클릭] 휘두르기  [우클릭] 사용  [G] 내려놓기  [V] 음성  [F10] 나가기");
     }
 
     private string BuildPrompt()

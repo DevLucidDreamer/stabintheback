@@ -17,6 +17,8 @@ public class LobbyReadyZone : MonoBehaviour
     private float timer;
     private bool inside;
 
+    public Collider Area => area != null ? area : GetComponent<Collider>();
+
     private void Awake()
     {
         area = GetComponent<Collider>();

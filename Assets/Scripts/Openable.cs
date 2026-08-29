@@ -78,5 +78,13 @@ public class Openable : Interactable
     }
 
     /// <summary>열림 상태를 확정한다. 로컬 토글 또는 네트워크 동기화에서 호출된다. 애니메이션은 Update가 처리.</summary>
-    public void SetOpen(bool open) => isOpen = open;
+    public void SetOpen(bool open)
+    {
+        if (isOpen == open)
+            return;
+
+        isOpen = open;
+        GameAudio.PlayAt(open ? "door_open" : "door_close", transform.position, 0.38f,
+            Random.Range(0.96f, 1.04f), 1.2f, 12f);
+    }
 }

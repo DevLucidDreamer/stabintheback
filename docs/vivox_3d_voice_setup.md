@@ -4,7 +4,8 @@
 
 ## 현재 기본값
 
-- 오픈 마이크
+- Push-to-Talk (`V`를 누르는 동안만 송신)
+- 마이크 음소거 전환: `M`
 - 원음 거리: 1 Unity unit
 - 최대 가청 거리: 25 Unity units
 - 거리 감쇠: `InverseByDistance`
@@ -13,7 +14,7 @@
 
 설정은 `Assets/Scripts/VivoxProximityVoice.cs`의 직렬화 필드에서 바꿀 수 있다. 컴포넌트를 `NetworkPlayer` 프리팹에 미리 추가하면 Inspector에서 값을 조정할 수 있고, 없어도 런타임에 자동으로 추가된다.
 
-PTT가 필요하면 `pushToTalk`을 켠다. 기본 키는 `V`다. 오픈 마이크에서는 화면 오른쪽 아래의 마이크 UI 또는 `M` 키로 음소거를 켜고 끈다. UI에는 연결 중·연결됨·음소거·연결 실패 상태가 표시된다.
+기본값은 PTT이며 `pushToTalk`을 끄면 오픈 마이크로 바꿀 수 있다. 배포 빌드는 예기치 않은 음성 송신을 막기 위해 PTT를 유지하는 것을 권장한다.
 
 ## Unity Dashboard 확인
 

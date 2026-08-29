@@ -46,8 +46,10 @@ public class NetworkOpenable : NetworkBehaviour, IOpenableNetworkController
 
     // 씬 오브젝트는 클라이언트 소유권이 없으므로 requiresAuthority = false.
     [Command(requiresAuthority = false)]
-    private void CmdToggle()
+    private void CmdToggle(NetworkConnectionToClient sender = null)
     {
+        if (!ServerInteractionGuard.IsNear(sender, transform.position))
+            return;
         SetServer(!isOpen);
     }
 

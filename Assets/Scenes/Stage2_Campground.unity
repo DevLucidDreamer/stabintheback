@@ -12498,6 +12498,7 @@ MonoBehaviour:
   lethalReach: 1.4
   lethalRadius: 1
   strikeDelay: 0.18
+  swingCooldown: 0.45
 --- !u!114 &799554272
 MonoBehaviour:
   m_ObjectHideFlags: 0

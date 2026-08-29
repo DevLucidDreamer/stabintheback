@@ -5,6 +5,7 @@ using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// NetworkBootstrap에 붙여, 타이틀 화면에서 넘어온 실행 의도(GameLaunch.Mode)에 따라
@@ -29,6 +30,7 @@ public class NetworkAutoLaunch : MonoBehaviour
         if (transport == null)
         {
             ShowFailure("NetworkBootstrap에 RelayMirrorTransport가 없습니다.");
+            await ReturnToTitleAfterFailureAsync();
             return;
         }
 
@@ -48,7 +50,7 @@ public class NetworkAutoLaunch : MonoBehaviour
                 GameLaunch.Code = joinCode.Trim().ToUpperInvariant();
                 transport.ConfigureHost(allocation.ToRelayServerData("dtls"));
                 nm.StartHost();
-                Debug.Log($"[Relay] 방 생성 완료. 참가 코드: {GameLaunch.Code}");
+                Debug.Log("[Relay] 방 생성 완료.");
             }
             else
             {
@@ -62,13 +64,14 @@ public class NetworkAutoLaunch : MonoBehaviour
                 transport.ConfigureClient(allocation.ToRelayServerData("dtls"));
                 nm.networkAddress = "relay";
                 nm.StartClient();
-                Debug.Log($"[Relay] 방 참가 요청 완료. 참가 코드: {GameLaunch.Code}");
+                Debug.Log("[Relay] 방 참가 요청 완료.");
             }
         }
         catch (Exception ex)
         {
             Debug.LogException(ex);
             ShowFailure(FriendlyMessage(ex));
+            await ReturnToTitleAfterFailureAsync();
         }
     }
 
@@ -95,5 +98,12 @@ public class NetworkAutoLaunch : MonoBehaviour
     private static void ShowFailure(string message)
     {
         GameHud.Ensure().ShowBanner("방 연결 실패\n" + message, 10f, new Color(1f, 0.4f, 0.35f));
+    }
+
+    private static async System.Threading.Tasks.Task ReturnToTitleAfterFailureAsync()
+    {
+        await System.Threading.Tasks.Task.Delay(4000);
+        if (!NetworkClient.active && !NetworkServer.active && SceneManager.GetActiveScene().name != "MainTitle")
+            SceneManager.LoadScene("MainTitle");
     }
 }
