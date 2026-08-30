@@ -50,7 +50,14 @@ public sealed class VivoxProximityVoice : MonoBehaviour
     private float connectedAt;
 
     public bool IsConnected => joined;
+    public bool IsConnecting => !joined && !stopping && !ConnectionFailed && !string.IsNullOrEmpty(requestedChannel);
+    public bool ConnectionFailed => !joined && reconnectAttempt > MaxReconnectAttempts;
     public bool IsMicrophoneMuted => VivoxService.Instance != null && VivoxService.Instance.IsInputDeviceMuted;
+    public bool IsUserMuted => userMuted;
+    public bool IsTransmitting => joined && lastTransmitState;
+    public bool IsPushToTalk => pushToTalk;
+    public Key PushToTalkKey => pushToTalkKey;
+    public Key MuteToggleKey => muteToggleKey;
     public string ActiveChannel => activeChannel;
 
     /// <summary>로컬 플레이어를 지정된 근접 음성 채널에 연결한다.</summary>
@@ -62,11 +69,13 @@ public sealed class VivoxProximityVoice : MonoBehaviour
         if (string.IsNullOrWhiteSpace(channelName))
             return;
 
+        pushToTalk = GameOptions.PushToTalk;
         listener = listenerTransform != null ? listenerTransform : transform;
         requestedChannel = SanitizeChannelName(channelName);
         stopping = false;
         reconnectAttempt = 0;
         reconnectScheduled = false;
+        VivoxVoiceHud.Ensure().Bind(this);
 
         if (joined && activeChannel == requestedChannel)
             return;
@@ -83,6 +92,7 @@ public sealed class VivoxProximityVoice : MonoBehaviour
         stopping = true;
         requestedChannel = null;
         ++operationVersion;
+        VivoxVoiceHud.Current?.Unbind(this);
         _ = DisconnectAsync();
 #endif
     }
@@ -98,7 +108,21 @@ public sealed class VivoxProximityVoice : MonoBehaviour
             VivoxService.Instance.UnmuteInputDevice();
     }
 
-    public void ToggleMicrophoneMute() => SetMicrophoneMuted(!IsMicrophoneMuted);
+    public void ToggleMicrophoneMute()
+    {
+        if (!joined)
+            return;
+
+        userMuted = !userMuted;
+        ApplyPushToTalk(force: true);
+    }
+
+    public void SetPushToTalk(bool enabled)
+    {
+        pushToTalk = enabled;
+        GameOptions.SetPushToTalk(enabled);
+        ApplyPushToTalk(force: true);
+    }
 
     private async Task ConnectAsync(string channelName, int version)
     {
@@ -170,9 +194,6 @@ public sealed class VivoxProximityVoice : MonoBehaviour
             ApplyPushToTalk(force: true);
             Update3DPosition();
             Debug.Log($"[Vivox] 3D 음성 채널 연결 완료: {channelName}");
-            GameHud.Ensure().ShowToast(pushToTalk
-                ? "음성 채팅 준비됨 · V를 누르는 동안 송신"
-                : "음성 채팅 준비됨 · M으로 음소거", 4f, new Color(0.65f, 0.9f, 1f));
         }
         catch (Exception exception)
         {
@@ -236,11 +257,7 @@ public sealed class VivoxProximityVoice : MonoBehaviour
 
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null && keyboard[muteToggleKey].wasPressedThisFrame)
-        {
-            userMuted = !userMuted;
-            GameHud.Ensure().ShowToast(userMuted ? "마이크 음소거" : "마이크 사용 가능", 1.8f,
-                userMuted ? new Color(1f, 0.65f, 0.55f) : new Color(0.6f, 1f, 0.7f));
-        }
+            ToggleMicrophoneMute();
 
         ApplyPushToTalk();
 
@@ -392,7 +409,6 @@ public sealed class VivoxProximityVoice : MonoBehaviour
         if (reconnectAttempt > MaxReconnectAttempts)
         {
             Debug.LogError("[Vivox] 음성 채팅 자동 복구를 중단했습니다. 네트워크 또는 계정 상태를 확인하세요.");
-            GameHud.Ensure().ShowToast("음성 채팅을 사용할 수 없습니다", 4f, new Color(1f, 0.55f, 0.45f));
             return;
         }
 

@@ -318,9 +318,8 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         hud.SetPrompt(BuildPrompt());
-        hud.SetBottom(heldWeapon == null
-            ? "[좌클릭] 줍기 · 사용  [E] 목록  [V] 음성  [M] 음소거  [F10] 나가기"
-            : "[좌클릭] 휘두르기  [우클릭] 사용  [G] 내려놓기  [V] 음성  [F10] 나가기");
+        // 전체 조작법은 ESC 메뉴에서 확인한다. 플레이 화면에는 조준 대상 안내만 남긴다.
+        hud.SetBottom(string.Empty);
     }
 
     private string BuildPrompt()

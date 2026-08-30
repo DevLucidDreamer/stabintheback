@@ -72,10 +72,7 @@ public class PlayerController : MonoBehaviour
 
         if (!inputPaused)
         {
-            // Esc로 커서를 풀고, 게임 화면을 클릭하면 다시 잠근다. (에디터에서 편리)
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-                LockCursor(false);
-            else if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
                 LockCursor(true);
 
             LookAround();

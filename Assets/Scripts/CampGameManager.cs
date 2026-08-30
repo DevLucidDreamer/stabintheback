@@ -74,27 +74,27 @@ public class CampGameManager : NetworkBehaviour
 
     [Header("모아야 할 재료 (씬에 놓인 개수로 자동 보정된다)")]
     [Tooltip("불을 피우는 데 필요한 장작. 전부 화로에 넣어야 불이 붙는다")]
-    [SerializeField] private int firewoodNeeded = 4;
+    [SerializeField] private int firewoodNeeded = 6;
 
     [Tooltip("구워야 할 고기")]
-    [SerializeField] private int meatNeeded = 4;
+    [SerializeField] private int meatNeeded = 6;
 
     [Tooltip("구워야 할 야채")]
-    [SerializeField] private int vegetableNeeded = 3;
+    [SerializeField] private int vegetableNeeded = 6;
 
     [Header("굽기")]
     [Tooltip("그릴에 동시에 올릴 수 있는 칸 수")]
     [SerializeField] private int grillSlots = 4;
 
     [Tooltip("올린 재료가 알맞게 익는 데 걸리는 시간(초)")]
-    [SerializeField] private float cookSeconds = 9f;
+    [SerializeField] private float cookSeconds = 14f;
 
     [Tooltip("다 익은 뒤 이만큼 더 방치하면 탄다(초)")]
-    [SerializeField] private float burnSeconds = 11f;
+    [SerializeField] private float burnSeconds = 10f;
 
     [Header("연출")]
     [Tooltip("재료를 다 모은 뒤 해가 넘어가는 데 걸리는 시간(초)")]
-    [SerializeField] private float duskSeconds = 9f;
+    [SerializeField] private float duskSeconds = 15f;
 
     [Tooltip("바베큐 완성 후 대기실로 돌아가기까지의 시간(초)")]
     [SerializeField] private float feastSeconds = 9f;

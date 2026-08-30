@@ -21,8 +21,19 @@ public class LobbyManager : NetworkBehaviour
     [Tooltip("인원이 모이면 이동할 게임 씬 이름(Build Settings에 포함되어야 함)")]
     [SerializeField] private string firstStageScene = "Stage3_CursedFortress";
 
-    private static readonly string[] StageScenes = { "Stage3_CursedFortress", "Stage2_Campground" };
-    private static readonly string[] StageNames = { "저주받은 성채", "캠핑장 바베큐" };
+    private static readonly string[] StageScenes =
+    {
+        "Stage3_CursedFortress",
+        "Stage4_MagicSwordEscape",
+        "Stage2_Campground"
+    };
+
+    private static readonly string[] StageNames =
+    {
+        "저주받은 성채",
+        "마검 탈출 성소",
+        "캠핑장 바베큐"
+    };
 
     [Tooltip("출발 조건이 갖춰진 뒤 실제 전환까지의 카운트다운(초)")]
     [SerializeField] private float countdownSeconds = 5f;
@@ -64,6 +75,7 @@ public class LobbyManager : NetworkBehaviour
     public int MinPlayers => minPlayers;
     public int MaxPlayers => maxPlayers;
     public string SelectedStageName => StageNames[Mathf.Clamp(selectedStage, 0, StageNames.Length - 1)];
+    public bool OptionsOpen => optionsOpen;
 
     /// <summary>출발까지 남은 초. 카운트다운 중이 아니면 -1.</summary>
     public int CountdownSecondsLeft
@@ -132,13 +144,10 @@ public class LobbyManager : NetworkBehaviour
         if (kb == null)
             return;
 
-        if (optionsOpen && kb.escapeKey.wasPressedThisFrame)
-        {
-            SetOptionsOpen(false);
-            return;
-        }
-
         if (!kb[optionsKey].wasPressedThisFrame)
+            return;
+
+        if (InGamePauseMenu.IsOpen)
             return;
 
         if (!IsHost)

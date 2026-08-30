@@ -18,13 +18,14 @@ using UnityEngine;
 /// 실제 UI 동작은 MainMenu.cs가 이름으로 계층을 찾아 연결한다 —
 /// 오브젝트 이름을 바꾸면 MainMenu의 문자열도 같이 고쳐야 한다.
 ///
-/// Build Settings 순서도 [MainTitle, Lobby, Stage3, Stage2]로 맞춘다.
+/// Build Settings 순서도 [MainTitle, Lobby, Stage3, Stage4, Stage2]로 맞춘다.
 /// </summary>
 public static class TitleSceneSetup
 {
     private const string TitlePath = "Assets/Scenes/MainTitle.unity";
     private const string LobbyPath = "Assets/Scenes/Lobby.unity";
     private const string Stage3Path = "Assets/Scenes/Stage3_CursedFortress.unity";
+    private const string Stage4Path = "Assets/Scenes/Stage4_MagicSwordEscape.unity";
     private const string Stage2Path = "Assets/Scenes/Stage2_Campground.unity";
 
     /// <summary>모닥불 자리. 캐릭터가 돌아다니는 중심이자 화면 구도의 기준점.</summary>
@@ -759,6 +760,7 @@ public static class TitleSceneSetup
         var order = new List<string> { TitlePath };
         if (System.IO.File.Exists(LobbyPath)) order.Add(LobbyPath);
         if (System.IO.File.Exists(Stage3Path)) order.Add(Stage3Path);
+        if (System.IO.File.Exists(Stage4Path)) order.Add(Stage4Path);
         if (System.IO.File.Exists(Stage2Path)) order.Add(Stage2Path);
 
         EditorBuildSettings.scenes = order

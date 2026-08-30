@@ -27,6 +27,8 @@ public static class Stage2Builder
 
     /// <summary>캠핑 프롭 프리팹을 모아 두는 곳. 씬에는 이 프리팹의 인스턴스만 놓인다.</summary>
     private const string PropFolder = "Assets/Prefabs/Camp";
+    private const string TentModelPath = "Assets/Models/TENT.blend";
+    private const string ChairModelPath = "Assets/Models/chair.blend";
 
     private static readonly Dictionary<string, GameObject> props = new Dictionary<string, GameObject>();
 
@@ -62,7 +64,7 @@ public static class Stage2Builder
     [MenuItem("Tools/Stage/Build Stage 2 (Campground)")]
     public static void BuildStage2()
     {
-        if (System.IO.File.Exists(ScenePath) &&
+        if (System.IO.File.Exists(ScenePath) && !Application.isBatchMode &&
             !EditorUtility.DisplayDialog("캠핑장 다시 만들기",
                 $"{ScenePath} 를 처음부터 새로 만듭니다.\n" +
                 "씬에서 손으로 옮기거나 추가해 둔 것은 전부 사라집니다.\n\n" +
@@ -73,7 +75,7 @@ public static class Stage2Builder
             return;
         }
 
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             return;
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -91,7 +93,7 @@ public static class Stage2Builder
         var root = new GameObject("Campground").transform;
 
         Terrain(root);
-        Lake(root, new Vector3(15f, 0f, 13f), 7.5f);
+        Lake(root, new Vector3(34f, 0f, 24f), 13f);
 
         // 캠프의 심장 — 불을 피울 화로와 그 옆의 바베큐 그릴.
         // 프리팹으로 굽지 않고 씬에 직접 짓는다. 스크립트가 자기 부품(장작·불꽃·불빛)을
@@ -102,9 +104,9 @@ public static class Stage2Builder
         Place("Tripod", root, new Vector3(-1.9f, 0f, -1.6f));
         Place("LogSeats", root, new Vector3(0f, 0f, 0f));
 
-        Place("Tent_Blue", root, new Vector3(-8f, 0f, -3f), 25f);
-        Place("Tent_Red", root, new Vector3(8f, 0f, -3.5f), -25f);
-        Place("Tent_Blue", root, new Vector3(-2f, 0f, 11f), 190f);
+        Place("Tent_Blue", root, new Vector3(-10f, 0f, -5f), 25f);
+        Place("Tent_Red", root, new Vector3(10f, 0f, -5.5f), -25f);
+        Place("Tent_Blue", root, new Vector3(-3f, 0f, 13f), 190f);
 
         Place("PicnicTable", root, new Vector3(7f, 0f, 4f));
         Place("Cooler", root, new Vector3(9.2f, 0f, 4.5f));
@@ -114,12 +116,14 @@ public static class Stage2Builder
         Place("WoodPile", root, new Vector3(-5.2f, 0f, -1.2f), 20f);
         Place("Signpost", root, new Vector3(-3.4f, 0f, -12.5f), 8f);
 
+        BuildDistricts(root);
+
         Forest(root);
         Scatter(root);
 
         // 지형/숲/잡목은 오브젝트 수가 많다. 움직이지 않으므로 static으로 묶어
         // 배칭과 라이트맵 대상이 되게 한다. (무기·준비물은 움직이므로 제외)
-        MarkStatic(root, "Terrain", "Lake", "Forest", "Scatter");
+        MarkStatic(root, "Terrain", "Lake", "Forest", "Scatter", "Districts");
 
         // 재료 — 캠핑장 구석구석에 흩어 놓는다.
         PlaceIngredients(root);
@@ -131,7 +135,7 @@ public static class Stage2Builder
         PlaceWeapons(root);
 
         // 스폰 포인트
-        SpawnPoints(new Vector3(0f, 1f, -14f));
+        SpawnPoints(new Vector3(0f, 1f, -54f));
 
         // 진행 매니저(재료·페이즈·굽기) + 무기 동기화 + 하늘 연출
         CampGameManager game = NetworkPhase3Setup.EnsureManager();
@@ -155,6 +159,12 @@ public static class Stage2Builder
                   "\n- 무기가 안 보이면 'Tools > Weapons > Build Weapon Prefabs'를 먼저 실행하고 다시 만드세요.");
     }
 
+    public static void BuildStage2Batch()
+    {
+        BuildStage2();
+        EditorApplication.Exit(0);
+    }
+
     // ---------------------------------------------------------------- 프롭 프리팹
 
     /// <summary>
@@ -169,11 +179,11 @@ public static class Stage2Builder
     {
         Prop("Tripod", t => Tripod(t, Vector3.zero));
         Prop("LogSeats", t => LogSeats(t, Vector3.zero, 2.4f));
-        Prop("Tent_Blue", t => Tent(t, Vector3.zero, 0f, matTent));
-        Prop("Tent_Red", t => Tent(t, Vector3.zero, 0f, matAccent));
+        Prop("Tent_Blue", t => ImportedModelProp(t, "Tent", TentModelPath, 4.8f, () => Tent(t, Vector3.zero, 0f, matTent)));
+        Prop("Tent_Red", t => ImportedModelProp(t, "Tent", TentModelPath, 4.8f, () => Tent(t, Vector3.zero, 0f, matAccent)));
         Prop("PicnicTable", t => PicnicTable(t, Vector3.zero));
         Prop("Cooler", t => Cooler(t, Vector3.zero));
-        Prop("CampChair", t => CampChair(t, Vector3.zero, 0f));
+        Prop("CampChair", t => ImportedModelProp(t, "CampChair", ChairModelPath, 1.2f, () => CampChair(t, Vector3.zero, 0f)));
         Prop("WoodPile", t => WoodPile(t, Vector3.zero, 0f));
         Prop("Signpost", t => Signpost(t, Vector3.zero, 0f));
         Prop("Tree_Pine", t => PineTree(t, Vector3.zero, 1f));
@@ -255,30 +265,32 @@ public static class Stage2Builder
     {
         Transform g = Group(p, "Terrain", Vector3.zero, 0f);
 
-        Box(g, "Ground", new Vector3(0f, -0.5f, 0f), new Vector3(70f, 1f, 70f), matGrass);
+        Box(g, "Ground", new Vector3(0f, -0.5f, 0f), new Vector3(140f, 1f, 140f), matGrass);
 
         // 잔디 색 패치 — 단색 평면의 밋밋함을 깨는 용도.
-        for (int i = 0; i < 26; i++)
+        for (int i = 0; i < 72; i++)
         {
-            var pos = new Vector3(Random.Range(-30f, 30f), 0.01f, Random.Range(-30f, 30f));
-            float s = Random.Range(3.5f, 9f);
+            var pos = new Vector3(Random.Range(-63f, 63f), 0.01f, Random.Range(-63f, 63f));
+            float s = Random.Range(5f, 14f);
             Prim(g, "GrassPatch", PrimitiveType.Cylinder, pos, new Vector3(0f, Random.value * 360f, 0f),
                 new Vector3(s, 0.005f, s * Random.Range(0.7f, 1.3f)), i % 2 == 0 ? matGrassDark : matGrassLight);
         }
 
         // 캠프로 들어오는 흙길 (스폰 지점 → 모닥불 → 출구)
-        Box(g, "Path", new Vector3(0f, 0.02f, 4f), new Vector3(3.4f, 0.04f, 40f), matDirt);
-        Box(g, "PathSide", new Vector3(9f, 0.02f, 9f), new Vector3(14f, 0.04f, 2.6f), matDirt);
+        Box(g, "MainTrail", new Vector3(0f, 0.02f, -7f), new Vector3(4.2f, 0.04f, 102f), matDirt);
+        Box(g, "LakeTrail", new Vector3(18f, 0.021f, 18f), new Vector3(37f, 0.04f, 3.2f), matDirt);
+        Box(g, "RangerTrail", new Vector3(-22f, 0.022f, 22f), new Vector3(45f, 0.04f, 3.2f), matDirt);
+        Box(g, "SouthLoop", new Vector3(-18f, 0.023f, -31f), new Vector3(38f, 0.04f, 2.8f), matDirt);
         Prim(g, "FirePad", PrimitiveType.Cylinder, new Vector3(0f, 0.025f, 0f), new Vector3(6.4f, 0.02f, 6.4f), matDirt);
 
         // 바깥 둔덕 — 낮은 언덕처럼 보이면서 실제로는 벽 역할을 한다.
-        for (int i = 0; i < 40; i++)
+        for (int i = 0; i < 72; i++)
         {
-            float a = i / 40f * Mathf.PI * 2f;
-            float r = 31f;
+            float a = i / 72f * Mathf.PI * 2f;
+            float r = 66f;
             var pos = new Vector3(Mathf.Cos(a) * r, Random.Range(1.2f, 2.2f), Mathf.Sin(a) * r);
             Prim(g, "Berm", PrimitiveType.Cube, pos, new Vector3(0f, a * Mathf.Rad2Deg, Random.Range(-8f, 8f)),
-                new Vector3(6f, Random.Range(3f, 4.5f), 6f), matGrassDark);
+                new Vector3(7f, Random.Range(3f, 5f), 7f), matGrassDark);
         }
     }
 
@@ -556,6 +568,93 @@ public static class Stage2Builder
         }
     }
 
+    /// <summary>
+    /// Models 폴더의 실제 제작 모델을 프롭 크기에 맞춰 정규화한다.
+    /// 모델의 원점과 단위가 달라도 바닥에 정확히 서도록 렌더러 경계를 기준으로 보정한다.
+    /// </summary>
+    private static void ImportedModelProp(Transform parent, string name, string assetPath,
+        float targetFootprint, System.Action fallback)
+    {
+        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+        if (asset == null)
+        {
+            Debug.LogWarning($"[Stage2] 모델을 찾지 못해 임시 프롭을 사용합니다: {assetPath}");
+            fallback?.Invoke();
+            return;
+        }
+
+        Transform group = Group(parent, name, Vector3.zero, 0f);
+        GameObject model = (GameObject)PrefabUtility.InstantiatePrefab(asset, group);
+        model.name = "Model";
+        model.transform.localPosition = Vector3.zero;
+        model.transform.localRotation = Quaternion.identity;
+
+        Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length == 0)
+        {
+            Debug.LogWarning($"[Stage2] 렌더러가 없는 모델이라 임시 프롭을 사용합니다: {assetPath}");
+            Object.DestroyImmediate(group.gameObject);
+            fallback?.Invoke();
+            return;
+        }
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+            bounds.Encapsulate(renderers[i].bounds);
+
+        float widest = Mathf.Max(0.001f, Mathf.Max(bounds.size.x, bounds.size.z));
+        model.transform.localScale *= targetFootprint / widest;
+
+        bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+            bounds.Encapsulate(renderers[i].bounds);
+        model.transform.position += new Vector3(-bounds.center.x, -bounds.min.y, -bounds.center.z);
+
+        bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+            bounds.Encapsulate(renderers[i].bounds);
+
+        BoxCollider collider = group.gameObject.AddComponent<BoxCollider>();
+        collider.center = group.InverseTransformPoint(bounds.center);
+        collider.size = new Vector3(bounds.size.x * 0.92f, bounds.size.y, bounds.size.z * 0.92f);
+    }
+
+    /// <summary>한 화면짜리 캠프가 아니라 탐색할 목적지가 있는 넓은 야영지로 구역을 나눈다.</summary>
+    private static void BuildDistricts(Transform root)
+    {
+        Transform districts = Group(root, "Districts", Vector3.zero, 0f);
+
+        Transform ranger = Group(districts, "WestRangerOutpost", new Vector3(-36f, 0f, 22f), 0f);
+        Place("Tent_Red", ranger, new Vector3(-3f, 0f, 2f), 70f);
+        Place("PicnicTable", ranger, new Vector3(3f, 0f, 0f), 90f);
+        Place("WoodPile", ranger, new Vector3(0f, 0f, -4f), -20f);
+        Place("CampChair", ranger, new Vector3(1f, 0f, 3f), 150f);
+        Place("Cooler", ranger, new Vector3(4f, 0f, 3f), -30f);
+
+        Transform south = Group(districts, "SouthPicnicGrove", new Vector3(-31f, 0f, -31f), 0f);
+        Place("Tent_Blue", south, new Vector3(-4f, 0f, 1f), 35f);
+        Place("PicnicTable", south, new Vector3(2f, 0f, 2f), 15f);
+        Place("CampChair", south, new Vector3(4f, 0f, -1f), -115f);
+        Place("CampChair", south, new Vector3(1f, 0f, -3f), -20f);
+        Clothesline(south, new Vector3(-1f, 0f, -4f), new Vector3(5f, 0f, -4f));
+
+        Transform lakeCamp = Group(districts, "LakesideCamp", new Vector3(34f, 0f, 10f), 0f);
+        Place("Tent_Red", lakeCamp, new Vector3(5f, 0f, 0f), -70f);
+        Place("CampChair", lakeCamp, new Vector3(0f, 0f, 2f), 15f);
+        Place("CampChair", lakeCamp, new Vector3(2f, 0f, 3f), -20f);
+        Place("Cooler", lakeCamp, new Vector3(4f, 0f, 4f), 18f);
+
+        Transform lookout = Group(districts, "NorthLookout", new Vector3(0f, 0f, 51f), 0f);
+        Box(lookout, "Deck", new Vector3(0f, 0.35f, 0f), new Vector3(8f, 0.7f, 6f), matWood);
+        for (int i = -1; i <= 1; i += 2)
+            Box(lookout, "Rail", new Vector3(i * 3.8f, 1f, 0f), new Vector3(0.12f, 1.3f, 6f), matWoodDark);
+        Place("CampChair", lookout, new Vector3(-1.4f, 0.7f, 0f), 180f);
+        Place("CampChair", lookout, new Vector3(1.4f, 0.7f, 0f), 180f);
+
+        Sign(districts, "TrailMap", new Vector3(3.8f, 0f, -48f), 180f,
+            "북쪽 전망대 · 서쪽 관리소\n동쪽 호수 · 남쪽 피크닉 숲");
+    }
+
     /// <summary>기둥 두 개에 걸린 빨랫줄 + 전구. 캠프 위쪽을 채워 준다.</summary>
     private static void Clothesline(Transform p, Vector3 a, Vector3 b)
     {
@@ -618,14 +717,16 @@ public static class Stage2Builder
     {
         Transform g = Group(p, "Forest", Vector3.zero, 0f);
 
-        for (int ring = 0; ring < 3; ring++)
+        for (int ring = 0; ring < 4; ring++)
         {
-            int count = 26 - ring * 4;
-            float radius = 20f + ring * 4.5f;
+            int count = 36 + ring * 6;
+            float radius = 38f + ring * 7f;
             for (int i = 0; i < count; i++)
             {
                 float a = (i + Random.Range(-0.35f, 0.35f)) / count * Mathf.PI * 2f;
                 var at = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (radius + Random.Range(-1.5f, 1.5f));
+                if (Mathf.Abs(at.x) < 3.2f || Mathf.Abs(at.z - 18f) < 2.6f || Mathf.Abs(at.z + 31f) < 2.4f)
+                    continue; // 주요 산책로는 막지 않는다.
                 if (Random.value < 0.55f)
                     Place("Tree_Pine", g, at, Random.value * 360f, Random.Range(0.85f, 1.5f));
                 else
@@ -638,6 +739,8 @@ public static class Stage2Builder
         {
             new Vector3(-12f, 0f, 6f), new Vector3(12.5f, 0f, -8f), new Vector3(-10f, 0f, -9f),
             new Vector3(4f, 0f, 15f), new Vector3(-14f, 0f, 14f), new Vector3(15f, 0f, 2f),
+            new Vector3(-28f, 0f, -18f), new Vector3(26f, 0f, -24f), new Vector3(-38f, 0f, 34f),
+            new Vector3(45f, 0f, 4f), new Vector3(18f, 0f, 45f), new Vector3(-8f, 0f, 48f),
         };
         foreach (Vector3 at in inner)
         {
@@ -680,11 +783,13 @@ public static class Stage2Builder
     {
         Transform g = Group(p, "Scatter", Vector3.zero, 0f);
 
-        for (int i = 0; i < 55; i++)
+        for (int i = 0; i < 170; i++)
         {
-            var at = new Vector3(Random.Range(-27f, 27f), 0f, Random.Range(-27f, 27f));
+            var at = new Vector3(Random.Range(-61f, 61f), 0f, Random.Range(-61f, 61f));
             if (at.magnitude < 5.5f)
                 continue; // 모닥불 주변은 비워 둔다
+            if (Mathf.Abs(at.x) < 2.8f || Mathf.Abs(at.z - 18f) < 2.2f || Mathf.Abs(at.z + 31f) < 2f)
+                continue; // 산책로 가독성 유지
 
             float roll = Random.value;
             if (roll < 0.35f)
@@ -824,9 +929,11 @@ public static class Stage2Builder
         Vector3[] firewood =
         {
             new Vector3(-4.6f, 0.12f, -2.1f),   // 장작더미 옆
-            new Vector3(-13.4f, 0.12f, 7.4f),   // 서쪽 숲
-            new Vector3(11.6f, 0.12f, -7.2f),   // 동쪽 그루터기 근처
-            new Vector3(13.9f, 0.12f, 10.4f),   // 호수 건너편
+            new Vector3(-39f, 0.12f, 18f),      // 서쪽 관리소
+            new Vector3(-34f, 0.12f, -34f),     // 남쪽 피크닉 숲
+            new Vector3(24f, 0.42f, 18f),       // 호수 잔교
+            new Vector3(1.5f, 0.82f, 51f),      // 북쪽 전망대
+            new Vector3(48f, 0.12f, -18f),      // 동쪽 외곽 숲
         };
         foreach (Vector3 at in firewood)
             Collectible(g, Ingredient.Firewood, "장작", at, FirewoodModel);
@@ -835,9 +942,11 @@ public static class Stage2Builder
         Vector3[] meat =
         {
             new Vector3(9.2f, 0.72f, 4.5f),     // 쿨러 위
-            new Vector3(6.4f, 0.86f, 3.8f),     // 피크닉 식탁 위
-            new Vector3(-8.3f, 0.1f, -1.1f),    // 왼쪽 텐트 앞
-            new Vector3(-2.1f, 0.1f, 9.5f),     // 안쪽 텐트 앞
+            new Vector3(-32f, 0.86f, 24f),      // 관리소 식탁
+            new Vector3(-29f, 0.86f, -29f),     // 피크닉 식탁
+            new Vector3(39f, 0.72f, 14f),       // 호숫가 쿨러
+            new Vector3(-8f, 0.1f, 42f),        // 전망대 아래 숲
+            new Vector3(42f, 0.1f, -38f),       // 남동쪽 야생 구역
         };
         foreach (Vector3 at in meat)
             Collectible(g, Ingredient.Meat, "고기", at, MeatModel);
@@ -846,8 +955,11 @@ public static class Stage2Builder
         Vector3[] vegetable =
         {
             new Vector3(7.7f, 0.86f, 4.3f),     // 식탁 위
-            new Vector3(4.4f, 0.1f, 13.6f),     // 북쪽 덤불가
-            new Vector3(14.6f, 0.1f, 5.9f),     // 호숫가
+            new Vector3(-42f, 0.1f, 28f),       // 서쪽 관리소 뒤
+            new Vector3(-24f, 0.1f, -38f),      // 남쪽 피크닉 숲
+            new Vector3(47f, 0.1f, 24f),        // 호수 동쪽
+            new Vector3(-2f, 0.82f, 52f),       // 전망대
+            new Vector3(32f, 0.1f, -46f),       // 남동쪽 숲
         };
         foreach (Vector3 at in vegetable)
             Collectible(g, Ingredient.Vegetable, "야채", at, VegetableModel);
@@ -912,13 +1024,13 @@ public static class Stage2Builder
         (Vector3 pos, float rotY)[] spots =
         {
             (new Vector3(2.6f, 0f, 2.4f), 25f),    // 모닥불 옆
-            (new Vector3(-2.8f, 0f, 2.0f), -40f),  // 모닥불 반대편
-            (new Vector3(7.0f, 0.82f, 4.0f), 90f), // 식탁 위
-            (new Vector3(-7.6f, 0f, -3.2f), 150f), // 왼쪽 텐트 앞
-            (new Vector3(8.4f, 0f, -3.4f), -150f), // 오른쪽 텐트 앞
-            (new Vector3(0.4f, 0f, 9.2f), 0f),     // 안쪽 텐트 앞
-            (new Vector3(-5.0f, 0f, 8.0f), 60f),   // 숲 쪽
-            (new Vector3(12.5f, 0f, 4.0f), -70f),  // 호숫가 (물에 빠지지 않게 물가 바깥)
+            (new Vector3(-37f, 0f, 20f), -40f),    // 서쪽 관리소
+            (new Vector3(-29f, 0.82f, -29f), 90f), // 피크닉 식탁
+            (new Vector3(39f, 0f, 10f), 150f),     // 호숫가 텐트
+            (new Vector3(0f, 0.72f, 51f), -150f),  // 북쪽 전망대
+            (new Vector3(37f, 0f, -32f), 0f),      // 남동쪽 숲
+            (new Vector3(-49f, 0f, -10f), 60f),    // 서쪽 외곽
+            (new Vector3(48f, 0f, 36f), -70f),     // 북동쪽 숲
         };
 
         var weapons = new GameObject("Weapons").transform;
@@ -1002,8 +1114,8 @@ public static class Stage2Builder
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = new Color(0.68f, 0.75f, 0.82f);
-        RenderSettings.fogStartDistance = 22f;
-        RenderSettings.fogEndDistance = 85f;
+        RenderSettings.fogStartDistance = 45f;
+        RenderSettings.fogEndDistance = 145f;
     }
 
     /// <summary>재료를 다 모으면 해를 넘겨 줄 연출 컨트롤러를 씬에 둔다.</summary>
@@ -1023,11 +1135,14 @@ public static class Stage2Builder
     /// </summary>
     private static void GoalSigns(Transform root)
     {
-        Sign(root, "SpawnSign", new Vector3(2.6f, 0f, -12.2f), 195f,
-            "캠핑장에서 장작·고기·야채를 모아라\n다 모으면 해가 진다");
+        Sign(root, "SpawnSign", new Vector3(3.2f, 0f, -49f), 180f,
+            "넓은 야영지를 나눠 수색하라\n장작·고기·야채를 다 모으면 해가 진다");
 
         Sign(root, "FireSign", new Vector3(-3.2f, 0f, -3.4f), 165f,
             "저녁이 되면 화로에 장작을 넣고\n그릴에 바베큐를 구워라");
+
+        Sign(root, "CrossroadSign", new Vector3(-4f, 0f, 18f), 90f,
+            "← 서쪽 관리소 · 북쪽 전망대 ↑\n동쪽 호수 → · 남쪽 피크닉 숲 ↓");
     }
 
     /// <summary>나무 팻말 + TMP 글자. rotY가 향하는 쪽(+Z)에서 읽힌다.</summary>

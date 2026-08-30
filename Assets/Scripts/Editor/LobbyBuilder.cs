@@ -18,7 +18,7 @@ using UnityEngine;
 /// 랜턴과 전구 줄이 시선을 광장 안쪽으로 모은다.
 ///
 /// 함께 처리하는 것:
-/// - Build Settings 순서를 [MainTitle, Lobby, Stage3_CursedFortress, Stage2_Campground]로 정리
+/// - Build Settings 순서를 [MainTitle, Lobby, Stage3, Stage4, Stage2]로 정리
 /// - MainTitle의 MainMenu가 대기실로 넘어가도록 대상 씬을 Lobby로 수정
 /// - TMP 기본 폰트를 Jalnan2 SDF로 지정 (런타임 HUD 글자용)
 ///
@@ -31,6 +31,7 @@ public static class LobbyBuilder
     private const string DemoPath = "Assets/Scenes/NetworkDemo.unity";
     private const string Stage2Path = "Assets/Scenes/Stage2_Campground.unity";
     private const string Stage3Path = "Assets/Scenes/Stage3_CursedFortress.unity";
+    private const string Stage4Path = "Assets/Scenes/Stage4_MagicSwordEscape.unity";
     private const string PlayerPrefabPath = "Assets/Prefabs/NetworkPlayer.prefab";
     private const string FrozenTunaPrefabPath = "Assets/Prefabs/Weapons/Frozen_Tuna.prefab";
 
@@ -64,7 +65,7 @@ public static class LobbyBuilder
     [MenuItem("Tools/Lobby/Build Lobby")]
     public static void BuildLobby()
     {
-        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             return;
 
         // 런타임에 만드는 HUD 글자가 한글을 그릴 수 있게 기본 폰트부터 잡는다.
@@ -112,6 +113,12 @@ public static class LobbyBuilder
                   "\n- 타이틀에서 호스트/참가하면 대기실로 들어갑니다." +
                   "\n- 호스트가 플레이할 스테이지를 고르고, 정원이 다 차면 출발합니다 (Tab으로 정원 조절)." +
                   "\n- 배치를 바꾸려면 이 파일의 좌표를 고치고 다시 실행하세요.");
+    }
+
+    public static void BuildLobbyBatch()
+    {
+        BuildLobby();
+        EditorApplication.Exit(0);
     }
 
     // ---------------------------------------------------------------- 지형
@@ -618,7 +625,10 @@ public static class LobbyBuilder
         // 팻말은 rotY가 가리키는 쪽에서 읽힌다. 스폰(0, -13)에서 광장으로 걸어오는
         // 사람이 읽어야 하므로 남쪽을 보게 세운다.
         Sign(g, "ControlSign", new Vector3(-4.2f, 0f, -10.2f), 145f,
-            "WASD 이동 · Space 점프\n좌클릭 줍기 / 휘두르기 · G 내려놓기");
+            "WASD 이동 · Shift 달리기 · Space 점프\n좌클릭 사용/공격 · 우클릭 보조 · G 내려놓기");
+
+        Sign(g, "MenuSign", new Vector3(0f, 0f, -11.8f), 180f,
+            "ESC 설정·조작방법 · E 준비물\nV 눌러 말하기 · M 음소거 · Tab 방 설정");
 
         Sign(g, "AltarSign", new Vector3(4.6f, 0f, -4.6f), 210f,
             "냉동참치 — 한 방이면 끝난다\n먼저 잡는 사람이 임자");
@@ -766,7 +776,7 @@ public static class LobbyBuilder
     }
 
     /// <summary>
-    /// Build Settings를 실제로 쓰는 네 씬만 남긴다: 타이틀 → 대기실 → 성채 → 캠핑장.
+    /// Build Settings를 실제로 쓰는 씬만 남긴다: 타이틀 → 대기실 → 성채 → 마검 성소 → 캠핑장.
     ///
     /// NetworkDemo·Demo·SampleScene은 개발 초기의 실험용이라 빌드에 넣지 않는다.
     /// 파일은 그대로 두므로 필요하면 에디터에서 직접 열어 볼 수 있다.
@@ -777,6 +787,7 @@ public static class LobbyBuilder
         if (System.IO.File.Exists(TitlePath)) order.Add(TitlePath);
         order.Add(LobbyPath);
         if (System.IO.File.Exists(Stage3Path)) order.Add(Stage3Path);
+        if (System.IO.File.Exists(Stage4Path)) order.Add(Stage4Path);
         if (System.IO.File.Exists(Stage2Path)) order.Add(Stage2Path);
 
         EditorBuildSettings.scenes = order

@@ -26,6 +26,10 @@ public static class ServerInteractionGuard
         if (!HasPlayer(sender) || area == null || !area.enabled)
             return false;
 
+        CharacterController character = sender.identity.GetComponent<CharacterController>();
+        if (character != null)
+            return area.bounds.Intersects(character.bounds);
+
         Vector3 player = sender.identity.transform.position + Vector3.up * 0.5f;
         Vector3 closest = area.ClosestPoint(player);
         return (closest - player).sqrMagnitude <= padding * padding;

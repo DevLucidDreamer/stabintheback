@@ -32,7 +32,7 @@ public class CoopPressurePlate : MonoBehaviour
     private void Update()
     {
         Transform player = ResolveLocalPlayer();
-        bool nowInside = player != null && area.bounds.Contains(player.position + Vector3.up * 0.2f);
+        bool nowInside = IsPlayerOnPlate(player);
         if (nowInside != inside)
         {
             inside = nowInside;
@@ -48,15 +48,36 @@ public class CoopPressurePlate : MonoBehaviour
         }
     }
 
+    private bool IsPlayerOnPlate(Transform player)
+    {
+        if (player == null || Area == null || !Area.enabled)
+            return false;
+
+        // CharacterController의 실제 발/몸통 범위와 판정 영역이 겹치는지 본다.
+        // transform 원점만 검사하면 경사·단차·네트워크 보간 중 발판을 놓칠 수 있다.
+        CharacterController character = player.GetComponent<CharacterController>();
+        if (character != null)
+            return Area.bounds.Intersects(character.bounds);
+
+        return Area.bounds.Contains(player.position + Vector3.up * 0.2f);
+    }
+
     private Transform ResolveLocalPlayer()
     {
-        if (localPlayer != null) return localPlayer;
-        if (NetworkClient.active && NetworkClient.localPlayer != null) localPlayer = NetworkClient.localPlayer.transform;
-        else
+        // 접속 직후 localPlayer가 아직 없을 때 첫 번째(원격) PlayerController를
+        // 캐시하면 이 클라이언트의 발판 입력이 영구히 다른 플레이어를 추적한다.
+        if (NetworkClient.active)
+        {
+            localPlayer = NetworkClient.localPlayer != null ? NetworkClient.localPlayer.transform : null;
+            return localPlayer;
+        }
+
+        if (localPlayer == null)
         {
             PlayerController player = FindFirstObjectByType<PlayerController>();
             if (player != null) localPlayer = player.transform;
         }
+
         return localPlayer;
     }
 

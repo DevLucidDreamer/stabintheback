@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public enum FortressPhase
 {
@@ -26,19 +27,20 @@ public class FortressGameManager : NetworkBehaviour
 
     [Header("협동 규칙")]
     [SerializeField, Min(1)] private int pressurePlateCount = 2;
-    [SerializeField, Min(0.2f)] private float pressureHoldSeconds = 2.5f;
-    [SerializeField, Min(1f)] private float twinLeverWindow = 7f;
-    [SerializeField, Min(0.2f)] private float rallyHoldSeconds = 2f;
+    [SerializeField, Min(0.2f)] private float pressureHoldSeconds = 3.5f;
+    [SerializeField, Min(1f)] private float twinLeverWindow = 8f;
+    [SerializeField, Min(0.2f)] private float rallyHoldSeconds = 3f;
     [SerializeField] private bool allowSoloAssist = true;
 
     [Header("룬 암호")]
-    [Tooltip("룬 받침대 번호의 정답 순서. 기본값은 달-불-가시-눈(2,0,3,1)")]
-    [SerializeField] private int[] runeSequence = { 2, 0, 3, 1 };
+    [Tooltip("룬 받침대 번호의 정답 순서. 달-불-가시-눈-불-달(2,0,3,1,0,2)")]
+    [SerializeField] private int[] runeSequence = { 2, 0, 3, 1, 0, 2 };
 
     [Header("마지막")]
-    [SerializeField, Min(1)] private int sealCount = 3;
+    [SerializeField, Min(1)] private int sealCount = 4;
     [SerializeField, Min(1f)] private float returnDelay = 8f;
-    [SerializeField] private string lobbyScene = "Lobby";
+    [FormerlySerializedAs("lobbyScene")]
+    [SerializeField] private string nextScene = "Stage2_Campground";
 
     [SyncVar(hook = nameof(OnPhaseSync))] private int phase;
     [SyncVar(hook = nameof(OnIntSync))] private int pressureMask;
@@ -120,7 +122,7 @@ public class FortressGameManager : NetworkBehaviour
         else if (Phase == FortressPhase.Victory && !sceneChanging && NetworkTime.time >= victoryEndsAt)
         {
             sceneChanging = true;
-            NetworkManager.singleton.ServerChangeScene(lobbyScene);
+            NetworkManager.singleton.ServerChangeScene(nextScene);
         }
     }
 

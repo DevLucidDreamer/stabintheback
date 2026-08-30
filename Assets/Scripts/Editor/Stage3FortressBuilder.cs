@@ -17,6 +17,7 @@ public static class Stage3FortressBuilder
     private const string LobbyPath = "Assets/Scenes/Lobby.unity";
     private const string TitlePath = "Assets/Scenes/MainTitle.unity";
     private const string CampPath = "Assets/Scenes/Stage2_Campground.unity";
+    private const string Stage4Path = "Assets/Scenes/Stage4_MagicSwordEscape.unity";
 
     private static Material stone, stoneDark, floor, iron, gold, purple, cyan, red, green, parchment;
 
@@ -50,6 +51,7 @@ public static class Stage3FortressBuilder
         BuildTwinLeverHall(root);
         BuildArmoryAndSeals(root);
         BuildEscapeSanctum(root);
+        AddStoryDetails(root);
         AddDecor(root);
         AddSpawns(new Vector3(0f, 0.1f, -36f));
 
@@ -146,8 +148,8 @@ public static class Stage3FortressBuilder
             "둘째 관문 · 갈라진 예언\n양쪽 벽화의 반쪽 문장을 음성으로 맞춰라");
 
         // 한쪽만 보면 순서를 알 수 없다: 서쪽은 앞의 둘, 동쪽은 뒤의 둘을 알려 준다.
-        WallClue(g, new Vector3(-11.85f, 2.2f, -2f), 90f, "서쪽 기록\n첫째 달   둘째 불");
-        WallClue(g, new Vector3(11.85f, 2.2f, 4f), -90f, "동쪽 기록\n셋째 가시   넷째 눈");
+        WallClue(g, new Vector3(-11.85f, 2.2f, -2f), 90f, "서쪽 기록\n첫째 달 · 둘째 불 · 다섯째 불");
+        WallClue(g, new Vector3(11.85f, 2.2f, 4f), -90f, "동쪽 기록\n셋째 가시 · 넷째 눈 · 여섯째 달");
 
         string[] names = { "불", "눈", "달", "가시" };
         Material[] colors = { red, cyan, gold, green };
@@ -202,13 +204,16 @@ public static class Stage3FortressBuilder
     {
         Transform g = Group(root, "Puzzle04_CursedArmory", Vector3.zero);
         Sign(g, "Guide", new Vector3(0f, 0f, 29f), 180f,
-            "마검의 회랑\n무기를 나누어 들고 세 봉인핵을 파괴하라");
+            "마검의 회랑\n측면 무기고를 수색해 네 봉인핵을 파괴하라");
         Sign(g, "Armory", new Vector3(-8.5f, 0f, 31f), 90f,
             "마검 무기고\n좌클릭 휘두르기 · G 내려놓기");
 
-        Seal(g, 0, new Vector3(-6.5f, 1.2f, 36f), purple);
-        Seal(g, 1, new Vector3(0f, 1.2f, 37.5f), red);
-        Seal(g, 2, new Vector3(6.5f, 1.2f, 36f), cyan);
+        Box(g, "WestVaultScreen", new Vector3(-7f, 2f, 33f), new Vector3(1f, 4f, 8f), stone);
+        Box(g, "EastVaultScreen", new Vector3(7f, 2f, 33f), new Vector3(1f, 4f, 8f), stone);
+        Seal(g, 0, new Vector3(-8f, 1.2f, 37f), purple);
+        Seal(g, 1, new Vector3(-2.7f, 1.2f, 37.5f), red);
+        Seal(g, 2, new Vector3(2.7f, 1.2f, 37.5f), cyan);
+        Seal(g, 3, new Vector3(8f, 1.2f, 37f), green);
     }
 
     private static void Seal(Transform parent, int index, Vector3 pos, Material mat)
@@ -257,8 +262,8 @@ public static class Stage3FortressBuilder
         string[] weapons = { "Carrot_Greatsword", "Whisk_Axe", "Pineapple_MorningStar", "Frozen_Tuna" };
         Vector3[] spots =
         {
-            new Vector3(-8.5f, 1f, 33f), new Vector3(-5.8f, 1f, 31.5f),
-            new Vector3(5.8f, 1f, 31.5f), new Vector3(8.5f, 1f, 33f),
+            new Vector3(-10.2f, 1f, 31f), new Vector3(-9.2f, 1f, 35f),
+            new Vector3(9.2f, 1f, 35f), new Vector3(10.2f, 1f, 31f),
         };
         for (int i = 0; i < weapons.Length; i++)
         {
@@ -269,6 +274,49 @@ public static class Stage3FortressBuilder
             float lift = weapon != null ? weapon.groundOffset : 0f;
             instance.transform.position = spots[i] + Vector3.up * lift;
             instance.transform.rotation = Quaternion.Euler(0f, i * 70f, 0f);
+        }
+    }
+
+    /// <summary>긴 복도를 비워 두지 않고 성채의 사용 흔적과 측면 관심 지점을 만든다.</summary>
+    private static void AddStoryDetails(Transform root)
+    {
+        Transform g = Group(root, "StoryDetails", Vector3.zero);
+
+        int[] bannerZ = { -32, -8, 14, 31 };
+        foreach (int z in bannerZ)
+        {
+            Box(g, "WestBanner", new Vector3(-11.92f, 3.4f, z), new Vector3(0.05f, 2.8f, 2.2f), purple, false);
+            Box(g, "EastBanner", new Vector3(11.92f, 3.4f, z), new Vector3(0.05f, 2.8f, 2.2f), red, false);
+        }
+
+        Vector3[] rubble =
+        {
+            new Vector3(-9.5f, 0.25f, -28f), new Vector3(9f, 0.2f, -7f),
+            new Vector3(-9f, 0.3f, 7f), new Vector3(9.4f, 0.25f, 25f),
+            new Vector3(-10f, 0.2f, 41f),
+        };
+        for (int i = 0; i < rubble.Length; i++)
+        {
+            GameObject chunk = Box(g, "Rubble_" + i, rubble[i],
+                new Vector3(1.2f + i * 0.08f, 0.5f, 0.9f), i % 2 == 0 ? stone : stoneDark);
+            chunk.transform.localRotation = Quaternion.Euler(i * 9f, i * 31f, i * 6f);
+        }
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            Transform cell = Group(g, side < 0 ? "WestCell" : "EastCell", new Vector3(side * 10.2f, 0f, 2f));
+            Box(cell, "Back", new Vector3(0f, 1.8f, 0f), new Vector3(3.5f, 3.6f, 0.35f), stoneDark);
+            for (int i = -2; i <= 2; i++)
+                Box(cell, "Bar", new Vector3(i * 0.6f, 1.6f, side * -0.3f), new Vector3(0.1f, 3.2f, 0.1f), iron);
+            Box(cell, "Bench", new Vector3(0f, 0.35f, side * -0.8f), new Vector3(2.5f, 0.35f, 0.7f), stone);
+        }
+
+        Transform armory = Group(g, "ArmoryFurniture", Vector3.zero);
+        foreach (float x in new[] { -10.6f, 10.6f })
+        {
+            Box(armory, "Rack", new Vector3(x, 1.2f, 32.5f), new Vector3(0.35f, 2.4f, 3.8f), iron);
+            Box(armory, "Crate", new Vector3(x > 0f ? 8.8f : -8.8f, 0.55f, 29.5f),
+                new Vector3(1.5f, 1.1f, 1.5f), stoneDark);
         }
     }
 
@@ -370,6 +418,7 @@ public static class Stage3FortressBuilder
         if (File.Exists(TitlePath)) order.Add(TitlePath);
         if (File.Exists(LobbyPath)) order.Add(LobbyPath);
         if (File.Exists(ScenePath)) order.Add(ScenePath);
+        if (File.Exists(Stage4Path)) order.Add(Stage4Path);
         if (File.Exists(CampPath)) order.Add(CampPath); // 기존 캠핑장은 별도 플레이테스트용으로 보존.
         EditorBuildSettings.scenes = order.Select(p => new EditorBuildSettingsScene(p, true)).ToArray();
     }

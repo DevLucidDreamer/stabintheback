@@ -9,12 +9,14 @@ public static class GameAudio
 {
     private const string ResourceRoot = "Audio/SFX/";
     private static readonly Dictionary<string, AudioClip> Clips = new Dictionary<string, AudioClip>();
+    private static readonly Dictionary<AudioSource, float> ManagedLoops = new Dictionary<AudioSource, float>();
     private static AudioSource uiSource;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
     {
         Clips.Clear();
+        ManagedLoops.Clear();
         uiSource = null;
     }
 
@@ -42,7 +44,7 @@ public static class GameAudio
         go.transform.position = position;
         AudioSource source = go.AddComponent<AudioSource>();
         source.clip = clip;
-        source.volume = Mathf.Clamp01(volume);
+        source.volume = Mathf.Clamp01(volume) * GameOptions.SfxVolume;
         source.pitch = Mathf.Clamp(pitch, 0.5f, 2f);
         source.spatialBlend = 1f;
         source.rolloffMode = AudioRolloffMode.Logarithmic;
@@ -69,7 +71,7 @@ public static class GameAudio
         }
 
         uiSource.pitch = Mathf.Clamp(pitch, 0.5f, 2f);
-        uiSource.PlayOneShot(clip, Mathf.Clamp01(volume));
+        uiSource.PlayOneShot(clip, Mathf.Clamp01(volume) * GameOptions.SfxVolume);
     }
 
     public static AudioSource CreateLoop(Transform owner, string key, float volume,
@@ -88,12 +90,30 @@ public static class GameAudio
         source.clip = clip;
         source.loop = true;
         source.playOnAwake = false;
-        source.volume = Mathf.Clamp01(volume);
+        float baseVolume = Mathf.Clamp01(volume);
+        source.volume = baseVolume * GameOptions.SfxVolume;
         source.spatialBlend = 1f;
         source.rolloffMode = AudioRolloffMode.Logarithmic;
         source.minDistance = minDistance;
         source.maxDistance = maxDistance;
         source.dopplerLevel = 0f;
+        ManagedLoops[source] = baseVolume;
         return source;
+    }
+
+    /// <summary>이미 재생 중인 루프 효과음에도 옵션 변경을 즉시 반영한다.</summary>
+    public static void ApplyVolumeSettings()
+    {
+        var stale = new List<AudioSource>();
+        foreach (KeyValuePair<AudioSource, float> pair in ManagedLoops)
+        {
+            if (pair.Key == null)
+                stale.Add(pair.Key);
+            else
+                pair.Key.volume = pair.Value * GameOptions.SfxVolume;
+        }
+
+        foreach (AudioSource source in stale)
+            ManagedLoops.Remove(source);
     }
 }

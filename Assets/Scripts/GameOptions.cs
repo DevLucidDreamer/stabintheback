@@ -6,20 +6,29 @@ using UnityEngine;
 public static class GameOptions
 {
     private const string VolumeKey = "opt_master_volume";
+    private const string SfxVolumeKey = "opt_sfx_volume";
     private const string LanguageKey = "opt_language";
+    private const string VoiceModeKey = "opt_voice_mode";
 
     public const string Korean = "ko";
     public const string English = "en";
 
     public static float MasterVolume { get; private set; } = 1f;
+    public static float SfxVolume { get; private set; } = 1f;
+    public static bool PushToTalk { get; private set; } = true;
 
     /// <summary>현재 지원 언어. 전체 현지화가 완료되기 전까지 한국어만 노출한다.</summary>
     public static string Language { get; private set; } = Korean;
 
-    /// <summary>게임 시작 시(타이틀 화면) 한 번 호출한다.</summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Initialize() => Load();
+
+    /// <summary>저장된 옵션을 읽고 즉시 적용한다.</summary>
     public static void Load()
     {
         MasterVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKey, 1f));
+        SfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(SfxVolumeKey, 1f));
+        PushToTalk = PlayerPrefs.GetInt(VoiceModeKey, 1) != 0;
         Language = Korean;
         Apply();
     }
@@ -32,6 +41,21 @@ public static class GameOptions
         Apply();
     }
 
+    public static void SetSfxVolume(float value)
+    {
+        SfxVolume = Mathf.Clamp01(value);
+        PlayerPrefs.SetFloat(SfxVolumeKey, SfxVolume);
+        PlayerPrefs.Save();
+        GameAudio.ApplyVolumeSettings();
+    }
+
+    public static void SetPushToTalk(bool enabled)
+    {
+        PushToTalk = enabled;
+        PlayerPrefs.SetInt(VoiceModeKey, enabled ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
     public static void SetLanguage(string language)
     {
         Language = Korean;
@@ -42,5 +66,6 @@ public static class GameOptions
     private static void Apply()
     {
         AudioListener.volume = MasterVolume;
+        GameAudio.ApplyVolumeSettings();
     }
 }

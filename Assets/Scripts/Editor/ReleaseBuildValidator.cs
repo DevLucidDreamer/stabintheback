@@ -22,6 +22,7 @@ public static class ReleaseBuildValidator
         "Assets/Scenes/MainTitle.unity",
         "Assets/Scenes/Lobby.unity",
         "Assets/Scenes/Stage3_CursedFortress.unity",
+        "Assets/Scenes/Stage4_MagicSwordEscape.unity",
         "Assets/Scenes/Stage2_Campground.unity"
     };
 
@@ -111,7 +112,7 @@ public static class ReleaseBuildValidator
             .Select(scene => scene.path)
             .ToArray();
         if (!enabledScenes.SequenceEqual(ExpectedScenes))
-            problems.Add("Build Settings 씬 순서가 MainTitle → Lobby → Stage3 → Stage2가 아닙니다.");
+            problems.Add("Build Settings 씬 순서가 MainTitle → Lobby → Stage3 → Stage4 → Stage2가 아닙니다.");
 
         foreach (string path in ExpectedScenes)
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null)
@@ -127,6 +128,9 @@ public static class ReleaseBuildValidator
             problems.Add("Standalone Application Identifier가 제품용 값이 아닙니다.");
         if (!HasSerializedCloudProjectId())
             problems.Add("Unity Cloud Project ID가 연결되지 않았습니다. Relay/Vivox 배포 환경을 확인하세요.");
+        else if (string.IsNullOrWhiteSpace(CloudProjectSettings.projectId))
+            problems.Add("Unity Services가 현재 프로젝트를 연결된 Cloud 프로젝트로 인식하지 못합니다. " +
+                         "Unity Hub 로그인 후 Edit > Project Settings > Services에서 기존 프로젝트를 다시 연결하세요.");
         if (PlayerSettings.defaultScreenWidth < 1280 || PlayerSettings.defaultScreenHeight < 720)
             problems.Add("기본 해상도가 1280×720보다 작습니다.");
         if (!PlayerSettings.resizableWindow)

@@ -65,12 +65,14 @@ public class NetworkPlayerSetup : NetworkBehaviour
     {
         ApplyLocalState(true);
         TryStartVoice();
-        GameHud.Ensure().ShowToast("[V] 누르는 동안 음성 송신 · [M] 음소거 · [F10] 세션 나가기", 6f,
+        InGamePauseMenu.Ensure().Bind(this, playerController, proximityVoice);
+        GameHud.Ensure().ShowToast("ESC를 눌러 조작방법을 확인하세요", 3f,
             new Color(0.65f, 0.9f, 1f));
     }
 
     public override void OnStopClient()
     {
+        InGamePauseMenu.Current?.Unbind(this);
         if (proximityVoice != null)
             proximityVoice.StopVoice();
         // 파괴되기 직전 원격 플레이어의 카메라/리스너까지 켜면 한 프레임 동안 중복 리스너가 생긴다.

@@ -19,7 +19,10 @@ public class CoopRallyZone : MonoBehaviour
     private void Update()
     {
         Transform player = ResolveLocalPlayer();
-        bool nowInside = player != null && area.bounds.Contains(player.position + Vector3.up * 0.5f);
+        CharacterController character = player != null ? player.GetComponent<CharacterController>() : null;
+        bool nowInside = character != null
+            ? Area.bounds.Intersects(character.bounds)
+            : player != null && Area.bounds.Contains(player.position + Vector3.up * 0.5f);
         if (nowInside == inside) return;
         inside = nowInside;
         FortressGameManager.Instance?.SetLocalRally(inside);
@@ -27,12 +30,16 @@ public class CoopRallyZone : MonoBehaviour
 
     private Transform ResolveLocalPlayer()
     {
-        if (localPlayer != null) return localPlayer;
-        if (NetworkClient.active && NetworkClient.localPlayer != null) localPlayer = NetworkClient.localPlayer.transform;
-        else
+        if (NetworkClient.active)
+        {
+            localPlayer = NetworkClient.localPlayer != null ? NetworkClient.localPlayer.transform : null;
+            return localPlayer;
+        }
+        if (localPlayer == null)
         {
             PlayerController player = FindFirstObjectByType<PlayerController>();
-            if (player != null) localPlayer = player.transform;
+            if (player != null)
+                localPlayer = player.transform;
         }
         return localPlayer;
     }

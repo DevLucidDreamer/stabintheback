@@ -1,17 +1,15 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 /// <summary>
-/// 로컬 Vivox 연결/마이크 상태를 화면 오른쪽 아래에 표시하고 음소거를 제어한다.
-/// 오픈 마이크는 M 또는 버튼으로 토글하고, PTT 모드는 지정 키 안내만 표시한다.
+/// 우측 하단에 마이크 상태만 작게 표시한다.
+/// 자세한 음성 설정과 조작 설명은 ESC 메뉴가 담당한다.
 /// </summary>
 public sealed class VivoxVoiceHud : MonoBehaviour
 {
     private static VivoxVoiceHud instance;
-
     public static VivoxVoiceHud Current => instance;
 
     public static VivoxVoiceHud Ensure()
@@ -20,27 +18,26 @@ public sealed class VivoxVoiceHud : MonoBehaviour
             return instance;
 
         instance = FindFirstObjectByType<VivoxVoiceHud>(FindObjectsInactive.Include);
-        if (instance != null)
-            return instance;
-
-        return new GameObject("VivoxVoiceHud").AddComponent<VivoxVoiceHud>();
+        return instance != null ? instance : new GameObject("VivoxVoiceHud").AddComponent<VivoxVoiceHud>();
     }
 
-    private readonly Color connectedColor = new Color(0.28f, 0.86f, 0.55f);
-    private readonly Color mutedColor = new Color(1f, 0.48f, 0.36f);
-    private readonly Color waitingColor = new Color(1f, 0.79f, 0.32f);
+    private static readonly Color Connected = new Color(0.3f, 0.88f, 0.58f);
+    private static readonly Color Transmitting = new Color(0.35f, 0.82f, 1f);
+    private static readonly Color Muted = new Color(1f, 0.4f, 0.34f);
+    private static readonly Color Waiting = new Color(0.72f, 0.74f, 0.78f);
 
     private VivoxProximityVoice voice;
     private Button microphoneButton;
     private Image buttonBackground;
-    private TextMeshProUGUI stateLabel;
-    private string lastState;
+    private Image[] microphoneParts;
+    private Image muteSlash;
+    private int lastState = -1;
 
     public void Bind(VivoxProximityVoice target)
     {
         voice = target;
         gameObject.SetActive(true);
-        Refresh(force: true);
+        Refresh(true);
     }
 
     public void Unbind(VivoxProximityVoice target)
@@ -70,64 +67,37 @@ public sealed class VivoxVoiceHud : MonoBehaviour
             instance = null;
     }
 
-    private void Update() => Refresh();
+    private void Update() => Refresh(false);
 
     private void ToggleMute()
     {
-        if (voice == null || !voice.IsConnected || voice.IsPushToTalk)
+        if (voice == null || !voice.IsConnected)
             return;
 
         voice.ToggleMicrophoneMute();
-        Refresh(force: true);
+        Refresh(true);
     }
 
-    private void Refresh(bool force = false)
+    private void Refresh(bool force)
     {
-        if (voice == null || stateLabel == null)
+        if (microphoneButton == null)
             return;
 
-        string state;
-        Color color;
-        bool interactable = false;
-
-        if (voice.IsPushToTalk)
-        {
-            state = voice.IsConnected
-                ? $"마이크  PTT · {voice.PushToTalkKey} 누르는 동안 송신"
-                : "음성 채팅 연결 중...";
-            color = voice.IsConnected ? connectedColor : waitingColor;
-        }
-        else if (voice.ConnectionFailed)
-        {
-            state = "음성 채팅 연결 실패";
-            color = mutedColor;
-        }
-        else if (!voice.IsConnected)
-        {
-            state = voice.IsConnecting ? "음성 채팅 연결 중..." : "음성 채팅 연결 안 됨";
-            color = waitingColor;
-        }
-        else if (voice.IsMicrophoneMuted)
-        {
-            state = $"마이크 꺼짐 · {voice.MuteToggleKey}로 켜기";
-            color = mutedColor;
-            interactable = true;
-        }
-        else
-        {
-            state = $"마이크 켜짐 · {voice.MuteToggleKey}로 끄기";
-            color = connectedColor;
-            interactable = true;
-        }
-
+        bool connected = voice != null && voice.IsConnected;
+        bool muted = voice == null || voice.ConnectionFailed || voice.IsUserMuted;
+        bool transmitting = connected && !muted && voice.IsTransmitting;
+        int state = voice != null && voice.ConnectionFailed ? 3 : muted ? 2 : transmitting ? 1 : connected ? 0 : 4;
         if (!force && state == lastState)
             return;
 
         lastState = state;
-        stateLabel.text = state;
-        stateLabel.color = color;
-        microphoneButton.interactable = interactable;
-        buttonBackground.color = new Color(color.r * 0.22f, color.g * 0.22f, color.b * 0.22f, 0.9f);
+        Color color = state == 1 ? Transmitting : state == 0 ? Connected : state == 2 || state == 3 ? Muted : Waiting;
+        microphoneButton.interactable = connected;
+        buttonBackground.color = new Color(0.025f, 0.03f, 0.04f, connected ? 0.72f : 0.48f);
+        foreach (Image part in microphoneParts)
+            part.color = color;
+        muteSlash.color = color;
+        muteSlash.gameObject.SetActive(state == 2 || state == 3);
     }
 
     private void Build()
@@ -136,44 +106,53 @@ public sealed class VivoxVoiceHud : MonoBehaviour
 
         var canvasObject = new GameObject("VoiceCanvas", typeof(RectTransform));
         canvasObject.transform.SetParent(transform, false);
-        var canvas = canvasObject.AddComponent<Canvas>();
+        Canvas canvas = canvasObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 120;
         canvasObject.AddComponent<GraphicRaycaster>();
 
-        var scaler = canvasObject.AddComponent<CanvasScaler>();
+        CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        var buttonObject = new GameObject("MicrophoneButton", typeof(RectTransform));
+        var buttonObject = new GameObject("Microphone", typeof(RectTransform));
         buttonObject.transform.SetParent(canvasObject.transform, false);
-        var rect = (RectTransform)buttonObject.transform;
+        RectTransform rect = (RectTransform)buttonObject.transform;
         rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0f);
         rect.anchoredPosition = new Vector2(-28f, 28f);
-        rect.sizeDelta = new Vector2(390f, 58f);
+        rect.sizeDelta = new Vector2(52f, 52f);
 
         buttonBackground = buttonObject.AddComponent<Image>();
         microphoneButton = buttonObject.AddComponent<Button>();
         microphoneButton.targetGraphic = buttonBackground;
+        microphoneButton.navigation = new Navigation { mode = Navigation.Mode.None };
         microphoneButton.onClick.AddListener(ToggleMute);
 
-        var labelObject = new GameObject("State", typeof(RectTransform));
-        labelObject.transform.SetParent(buttonObject.transform, false);
-        stateLabel = labelObject.AddComponent<TextMeshProUGUI>();
-        TMP_FontAsset font = GameHud.ResolveFont();
-        if (font != null)
-            stateLabel.font = font;
-        stateLabel.fontSize = 23f;
-        stateLabel.alignment = TextAlignmentOptions.Center;
-        stateLabel.raycastTarget = false;
+        microphoneParts = new[]
+        {
+            Part(rect, "Capsule", new Vector2(0f, 6f), new Vector2(12f, 24f)),
+            Part(rect, "BracketLeft", new Vector2(-9f, 1f), new Vector2(3f, 17f)),
+            Part(rect, "BracketRight", new Vector2(9f, 1f), new Vector2(3f, 17f)),
+            Part(rect, "Stem", new Vector2(0f, -10f), new Vector2(3f, 10f)),
+            Part(rect, "Base", new Vector2(0f, -16f), new Vector2(22f, 3f)),
+        };
+        muteSlash = Part(rect, "MutedSlash", Vector2.zero, new Vector2(34f, 3f));
+        muteSlash.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -42f);
+    }
 
-        var labelRect = (RectTransform)labelObject.transform;
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = new Vector2(14f, 6f);
-        labelRect.offsetMax = new Vector2(-14f, -6f);
+    private static Image Part(RectTransform parent, string name, Vector2 position, Vector2 size)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        RectTransform rect = (RectTransform)go.transform;
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+        Image image = go.AddComponent<Image>();
+        image.raycastTarget = false;
+        return image;
     }
 
     private static void EnsureEventSystem()
@@ -181,7 +160,7 @@ public sealed class VivoxVoiceHud : MonoBehaviour
         if (EventSystem.current != null)
             return;
 
-        var go = new GameObject("EventSystem");
+        GameObject go = new GameObject("EventSystem");
         go.AddComponent<EventSystem>();
         go.AddComponent<InputSystemUIInputModule>().AssignDefaultActions();
     }
