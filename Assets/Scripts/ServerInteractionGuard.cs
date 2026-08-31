@@ -10,7 +10,12 @@ public static class ServerInteractionGuard
     public const float DefaultRange = 3.75f;
 
     public static bool HasPlayer(NetworkConnectionToClient sender)
-        => sender != null && sender.identity != null && sender.identity.gameObject.activeInHierarchy;
+    {
+        if (sender == null || sender.identity == null || !sender.identity.gameObject.activeInHierarchy)
+            return false;
+        PlayerHealth health = sender.identity.GetComponent<PlayerHealth>();
+        return health == null || !health.IsDead;
+    }
 
     public static bool IsNear(NetworkConnectionToClient sender, Vector3 target, float range = DefaultRange)
     {
@@ -37,4 +42,32 @@ public static class ServerInteractionGuard
 
     public static bool IsFinite(Vector3 value)
         => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+
+    /// <summary>
+    /// Pressure plates use the latest replicated transform. With autoSyncTransforms
+    /// disabled, a remote CharacterController's physics bounds can still describe
+    /// its previous position until the next physics step.
+    /// </summary>
+    public static bool IsOnPressurePlate(NetworkConnectionToClient sender, Collider area)
+    {
+        if (!HasPlayer(sender) || area == null || !area.enabled || !area.gameObject.activeInHierarchy)
+            return false;
+
+        CharacterController character = sender.identity.GetComponent<CharacterController>();
+        if (character == null || !character.enabled)
+            return false;
+
+        Transform player = character.transform;
+        Vector3 scale = player.lossyScale;
+        // Players remain upright (yaw only). Derive the capsule's world bounds
+        // without depending on Physics.SyncTransforms or locally simulated Move.
+        float radius = character.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+        float height = Mathf.Max(character.height * Mathf.Abs(scale.y), radius * 2f);
+        Vector3 center = player.TransformPoint(character.center);
+        if (!IsFinite(center) || !float.IsFinite(radius) || !float.IsFinite(height))
+            return false;
+
+        Bounds playerBounds = new Bounds(center, new Vector3(radius * 2f, height, radius * 2f));
+        return area.bounds.Intersects(playerBounds);
+    }
 }

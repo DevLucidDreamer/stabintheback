@@ -957,6 +957,7 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
+  deathViewDuration: 2
   spawnProtection: 1.5
 --- !u!114 &8183371748993204511
 MonoBehaviour:

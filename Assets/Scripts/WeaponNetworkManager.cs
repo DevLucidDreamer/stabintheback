@@ -157,7 +157,7 @@ public class WeaponNetworkManager : NetworkBehaviour
     [Command(requiresAuthority = false)]
     private void CmdSwing(NetworkConnectionToClient sender = null)
     {
-        if (sender == null || sender.identity == null)
+        if (!ServerInteractionGuard.HasPlayer(sender))
             return;
 
         uint attacker = sender.identity.netId;
@@ -186,6 +186,8 @@ public class WeaponNetworkManager : NetworkBehaviour
         if (weaponId < 0)
             return; // 그 사이 무기를 놓쳤으면 살상 없음
         if (!NetworkServer.spawned.TryGetValue(attackerNetId, out var attacker) || attacker == null)
+            return;
+        if (attacker.TryGetComponent(out PlayerHealth attackerHealth) && attackerHealth.IsDead)
             return;
 
         // 무기마다 사거리/판정 크기가 다르다 (대검은 멀리, 고무 오리는 코앞).

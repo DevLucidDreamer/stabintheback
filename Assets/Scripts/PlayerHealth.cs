@@ -2,84 +2,132 @@ using Mirror;
 using UnityEngine;
 
 /// <summary>
-/// 무기 원킬 + 즉시 리스폰 (Phase 5).
-/// - 체력 개념 없이 무기에 한 대 맞으면 죽는다(서버 권한).
-/// - 죽으면 즉시 스폰 지점으로 리스폰하고, 들고 있던 무기는 죽은 자리에 떨어진다(권력 이동).
-/// - 죽은 자리에는 래그돌 시체가 남아 맞은 방향으로 날아간다(PlayerRagdoll).
-/// - 리스폰 직후 짧은 무적으로 스폰킬을 막는다.
+/// 서버가 사망 대기 → 리스폰 → 보호 종료를 결정한다.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
 public class PlayerHealth : NetworkBehaviour
 {
-    [Tooltip("리스폰 직후 무적 시간(초). 스폰킬 방지")]
-    [SerializeField] private float spawnProtection = 1.5f;
+    [SerializeField, Min(0.1f)] private float deathViewDuration = 2f;
+    [Tooltip("리스폰한 순간부터 적용되는 무적 시간(초)")]
+    [SerializeField, Min(0f)] private float spawnProtection = 1.5f;
 
+    // One atomic update keeps pose, respawn position and protection time together.
+    public struct LifeState
+    {
+        public bool dead;
+        public uint deathSequence;
+        public Vector3 position;
+        public Quaternion rotation;
+        public Vector3 blowDirection;
+        public double endsAt;
+    }
+
+    [SyncVar(hook = nameof(OnLifeChanged))] private LifeState life;
     private CharacterController controller;
     private PlayerRagdoll ragdoll;
-    private float invulnUntil;      // 서버 기준 무적 종료 시각
+    private PlayerRespawnVisuals visuals;
+    private uint shownDeathSequence;
+    private GameObject corpse;
+
+    public bool IsDead => life.dead;
+    public bool IsSpawnProtected => !IsDead && NetworkTime.time < life.endsAt;
+    public float ProtectionRemaining => IsSpawnProtected ? (float)(life.endsAt - NetworkTime.time) : 0f;
+    public double ProtectionEndsAt => life.endsAt;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
         ragdoll = GetComponent<PlayerRagdoll>();
+        visuals = GetComponent<PlayerRespawnVisuals>();
+        if (visuals == null) visuals = gameObject.AddComponent<PlayerRespawnVisuals>();
     }
 
-    /// <summary>서버에서 이 플레이어를 처치한다.</summary>
-    /// <param name="blowDirection">맞은 방향(수평). 시체가 이쪽으로 날아간다.</param>
+    public override void OnStartClient() => RefreshPresentation();
+    public override void OnStartLocalPlayer() => RefreshPresentation();
+
+    [ServerCallback]
+    private void Update()
+    {
+        if (life.dead && NetworkTime.time >= life.endsAt)
+            ServerRespawn();
+    }
+
     [Server]
     public void ServerKill(uint killerNetId, Vector3 blowDirection = default)
     {
-        if (Time.time < invulnUntil)
-            return; // 무적/중복 처리 방지
-        invulnUntil = Time.time + spawnProtection;
-
-        // 들고 있던 무기를 떨어뜨려 권력을 이동시킨다.
-        var weapons = WeaponNetworkManager.Instance;
-        if (weapons != null)
-            weapons.ServerDropWeaponOf(netId, transform.position + Vector3.up * 0.5f);
-
-        // 죽은 자리/자세를 그대로 넘겨, 리스폰 이동과 관계없이 시체가 제자리에 남게 한다.
-        if (blowDirection.sqrMagnitude < 0.0001f)
+        if (IsDead || IsSpawnProtected) return;
+        if (!ServerInteractionGuard.IsFinite(blowDirection) || blowDirection.sqrMagnitude < 0.0001f)
             blowDirection = transform.forward;
-        RpcDie(transform.position, transform.rotation, blowDirection.normalized);
 
-        // 리스폰 위치 선택 (Phase 1의 NetworkStartPosition 사용).
-        Vector3 pos = transform.position;
-        NetworkManager nm = NetworkManager.singleton;
-        if (nm != null)
+        life = new LifeState
         {
-            Transform sp = nm.GetStartPosition();
-            if (sp != null)
-                pos = sp.position;
-        }
-
-        TargetRespawn(connectionToClient, pos);
+            dead = true,
+            deathSequence = life.deathSequence + 1,
+            position = transform.position,
+            rotation = transform.rotation,
+            blowDirection = blowDirection.normalized,
+            endsAt = NetworkTime.time + deathViewDuration,
+        };
+        controller.enabled = false;
+        WeaponNetworkManager.Instance?.ServerDropWeaponOf(netId, transform.position + Vector3.up * 0.5f);
     }
 
-    /// <summary>죽는 연출. 시체 물리는 동기화하지 않고 각자 로컬에서 굴린다.</summary>
-    [ClientRpc]
-    private void RpcDie(Vector3 position, Quaternion rotation, Vector3 blowDirection)
+    [Server]
+    private void ServerRespawn()
     {
-        if (ragdoll != null)
-            ragdoll.SpawnCorpse(position, rotation, blowDirection);
+        Transform spawn = NetworkManager.singleton != null ? NetworkManager.singleton.GetStartPosition() : null;
+        Vector3 position = spawn != null ? spawn.position : life.position;
+        Quaternion rotation = spawn != null ? spawn.rotation : life.rotation;
+        Teleport(position, rotation);
+        life = new LifeState
+        {
+            deathSequence = life.deathSequence,
+            position = position,
+            rotation = rotation,
+            endsAt = NetworkTime.time + spawnProtection,
+        };
     }
 
-    // 위치 이동은 클라이언트 권한 NetworkTransform이라, 소유 클라이언트에서 옮겨야 동기화된다.
-    [TargetRpc]
-    private void TargetRespawn(NetworkConnectionToClient conn, Vector3 pos)
+    private void OnLifeChanged(LifeState previous, LifeState current)
     {
-        if (controller != null)
+        if (previous.dead && !current.dead)
+            Teleport(current.position, current.rotation);
+        RefreshPresentation();
+    }
+
+    private void RefreshPresentation()
+    {
+        if (!isClient) return;
+        controller.enabled = !IsDead;
+        if (IsDead)
         {
-            controller.enabled = false;      // 직접 이동이 막히지 않게 잠깐 끈다
-            transform.position = pos;
-            controller.enabled = true;
+            if (shownDeathSequence != life.deathSequence)
+            {
+                shownDeathSequence = life.deathSequence;
+                if (ragdoll != null)
+                    corpse = ragdoll.SpawnCorpse(life.position, life.rotation, life.blowDirection,
+                        Mathf.Max(0.1f, (float)(life.endsAt - NetworkTime.time)) + 0.2f);
+            }
+            if (isLocalPlayer && visuals.BeginDeathView(corpse, life.position, life.rotation))
+                GameHud.Ensure().ShowToast("당했다! 잠시 후 리스폰", 2f, new Color(1f, 0.4f, 0.35f));
         }
         else
         {
-            transform.position = pos;
+            bool wasViewingDeath = visuals.EndDeathView();
+            if (wasViewingDeath && isLocalPlayer)
+                GameHud.Ensure().ShowToast($"리스폰 보호 중 · {ProtectionRemaining:0.0}초", ProtectionRemaining,
+                    new Color(0.55f, 0.9f, 1f));
         }
+        GetComponent<NetworkPlayerSetup>()?.RefreshLifeState();
+    }
 
-        if (isLocalPlayer)
-            GameHud.Ensure().ShowToast("당했다!  리스폰", 1.8f, new Color(1f, 0.3f, 0.28f));
+    private void Teleport(Vector3 position, Quaternion rotation)
+    {
+        controller.enabled = false;
+        transform.SetPositionAndRotation(position, rotation);
+        // Clear old interpolation snapshots on server, owner and observers.
+        GetComponent<NetworkTransformBase>()?.ResetState();
+        GetComponent<PlayerController>()?.ResetMotionAfterRespawn();
+        controller.enabled = true;
     }
 }

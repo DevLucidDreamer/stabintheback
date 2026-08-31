@@ -163,13 +163,15 @@ public class NetworkPlayerSetup : NetworkBehaviour
     {
         CacheComponents();
         EnsureRemoteAvatar();
+        PlayerHealth health = GetComponent<PlayerHealth>();
+        bool alive = health == null || !health.IsDead;
 
         if (playerController != null)
-            playerController.SetInputEnabled(local);
+            playerController.SetInputEnabled(local && alive);
         if (playerInteraction != null)
-            playerInteraction.SetInputEnabled(local);
+            playerInteraction.SetInputEnabled(local && alive);
         if (itemChecklist != null)
-            itemChecklist.SetInputEnabled(local);
+            itemChecklist.SetInputEnabled(local && alive);
 
         foreach (Camera cam in cameras)
         {
@@ -184,8 +186,10 @@ public class NetworkPlayerSetup : NetworkBehaviour
         }
 
         if (remoteAvatarRoot != null)
-            remoteAvatarRoot.SetActive(!local);
+            remoteAvatarRoot.SetActive(!local && alive);
     }
+
+    public void RefreshLifeState() => ApplyLocalState(isLocalPlayer);
 
     private void CacheComponents()
     {

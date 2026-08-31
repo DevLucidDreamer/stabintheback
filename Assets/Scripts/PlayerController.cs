@@ -67,7 +67,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (!inputEnabled)
+        if (!inputEnabled || !controller.enabled)
             return;
 
         if (!inputPaused)
@@ -174,10 +174,13 @@ public class PlayerController : MonoBehaviour
 
     public void SetInputEnabled(bool enabled)
     {
+        if (inputEnabled == enabled) return;
         inputEnabled = enabled;
         if (isActiveAndEnabled)
-            LockCursor(enabled);
+            LockCursor(enabled && !inputPaused);
     }
+
+    public void ResetMotionAfterRespawn() => verticalVelocity = 0f;
 
     /// <summary>
     /// 메뉴/옵션 창이 열려 있는 동안 조작만 멈춘다.

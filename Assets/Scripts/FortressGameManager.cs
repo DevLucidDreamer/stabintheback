@@ -55,6 +55,7 @@ public class FortressGameManager : NetworkBehaviour
     [SyncVar(hook = nameof(OnIntSync))] private int connectedPlayerCount = 1;
 
     private readonly Dictionary<int, HashSet<uint>> plateOccupants = new Dictionary<int, HashSet<uint>>();
+    private CoopPressurePlate[] pressurePlates;
     private readonly HashSet<uint> rallyPlayers = new HashSet<uint>();
     private readonly Dictionary<uint, double> nextActionAt = new Dictionary<uint, double>();
     private readonly uint[] leverUsers = new uint[2];
@@ -94,6 +95,7 @@ public class FortressGameManager : NetworkBehaviour
         base.OnStartServer();
         nextActionAt.Clear();
         phase = (int)FortressPhase.Counterweights;
+        pressurePlates = FindObjectsByType<CoopPressurePlate>(FindObjectsInactive.Include, FindObjectsSortMode.None);
     }
 
     public override void OnStartClient()
@@ -128,43 +130,29 @@ public class FortressGameManager : NetworkBehaviour
 
     // 압력판 -----------------------------------------------------------------
 
-    public void SetLocalPressure(int index, bool occupied)
+    [Server]
+    private void RefreshPressureOccupants()
     {
-        if (NetworkClient.active)
-            CmdSetPressure(index, occupied);
-        else
-            OfflineSetPressure(index, occupied);
-    }
+        foreach (HashSet<uint> occupants in plateOccupants.Values)
+            occupants.Clear();
 
-    [Command(requiresAuthority = false)]
-    private void CmdSetPressure(int index, bool occupied, NetworkConnectionToClient sender = null)
-    {
-        if (Phase != FortressPhase.Counterweights || sender?.identity == null || !plateOccupants.ContainsKey(index))
-            return;
+        foreach (CoopPressurePlate plate in pressurePlates)
+        {
+            if (plate == null || !plate.isActiveAndEnabled ||
+                !plateOccupants.TryGetValue(plate.PlateIndex, out HashSet<uint> occupants))
+                continue;
 
-        CoopPressurePlate plate = FindPressurePlate(index);
-        if (occupied && (plate == null || !ServerInteractionGuard.IsInside(sender, plate.Area)))
-            return;
-
-        uint id = sender.identity.netId;
-        if (occupied)
-            plateOccupants[index].Add(id);
-        else
-            plateOccupants[index].Remove(id);
-        RebuildPressureMask();
-    }
-
-    private void OfflineSetPressure(int index, bool occupied)
-    {
-        if (!plateOccupants.ContainsKey(index))
-            return;
-        if (occupied) plateOccupants[index].Add(1); else plateOccupants[index].Remove(1);
+            foreach (NetworkConnectionToClient connection in NetworkServer.connections.Values)
+                if (ServerInteractionGuard.IsOnPressurePlate(connection, plate.Area))
+                    occupants.Add(connection.identity.netId);
+        }
         RebuildPressureMask();
     }
 
     [Server]
     private void ServerUpdatePressure()
     {
+        RefreshPressureOccupants();
         int fullMask = (1 << pressurePlateCount) - 1;
         bool solo = allowSoloAssist && ServerPlayerCount() <= 1;
 
@@ -454,13 +442,6 @@ public class FortressGameManager : NetworkBehaviour
             return false;
         nextActionAt[id] = NetworkTime.time + cooldown;
         return true;
-    }
-
-    private static CoopPressurePlate FindPressurePlate(int index)
-    {
-        foreach (CoopPressurePlate plate in FindObjectsByType<CoopPressurePlate>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-            if (plate.PlateIndex == index) return plate;
-        return null;
     }
 
     private static RunePedestal FindRune(int index)

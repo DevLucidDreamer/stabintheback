@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// 죽는 연출 담당. 죽은 자리에 goshi 모델로 만든 래그돌 시체를 떨어뜨린다.
 ///
-/// 플레이어 본체는 (기존 설계대로) 즉시 리스폰하므로, 시체는 본체와 완전히 분리된
+/// 사망 카메라가 추적할 시체는 플레이어 본체와 완전히 분리된
 /// 연출용 오브젝트다. 물리는 동기화하지 않고 각 클라이언트가 로컬로 굴린다 —
 /// 죽는 위치/방향만 서버가 알려주면 충분하고, 트래픽도 들지 않는다.
 ///
@@ -37,10 +37,10 @@ public class PlayerRagdoll : MonoBehaviour
     }
 
     /// <summary>죽은 자리에 시체를 만든다. 모든 클라이언트가 각자 호출한다.</summary>
-    public void SpawnCorpse(Vector3 position, Quaternion rotation, Vector3 blowDirection)
+    public GameObject SpawnCorpse(Vector3 position, Quaternion rotation, Vector3 blowDirection, float visibleSeconds = 0f)
     {
         if (ragdollPrefab == null)
-            return;
+            return null;
 
         GameObject corpse = Instantiate(ragdollPrefab, position, rotation);
         CopyPose(corpse.transform);
@@ -53,7 +53,9 @@ public class PlayerRagdoll : MonoBehaviour
         var script = corpse.GetComponent<RagdollCorpse>();
         if (script == null)
             script = corpse.AddComponent<RagdollCorpse>();
+        script.KeepVisibleFor(visibleSeconds);
         script.Launch(blowDirection, launchForce, launchSpin);
+        return corpse;
     }
 
     /// <summary>

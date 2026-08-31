@@ -5,7 +5,7 @@ using UnityEngine;
 /// (네트워크로 물리를 동기화하지 않으므로 사람마다 튀는 모양이 조금씩 다르다).
 ///
 /// 뼈대에 붙은 Rigidbody들이 물리로 흐물흐물 무너지고, 곧바로 쪼그라들며 사라진다.
-/// 죽자마자 리스폰하는 게임이라 시체가 오래 남으면 시야만 가리므로 총 1초 안에 정리한다.
+/// 사망 카메라가 끝날 때까지 유지한 후 정리한다.
 /// </summary>
 public class RagdollCorpse : MonoBehaviour
 {
@@ -27,15 +27,16 @@ public class RagdollCorpse : MonoBehaviour
         colliders = GetComponentsInChildren<Collider>();
         startScale = transform.localScale;
         vanishStartTime = Time.time + ragdollTime;
-        Destroy(gameObject, ragdollTime + vanishDuration);
 
         IgnorePlayers();
     }
 
+    public void KeepVisibleFor(float seconds)
+        => vanishStartTime = Mathf.Max(vanishStartTime, Time.time + seconds);
+
     /// <summary>
     /// 시체는 순수 연출이라 플레이어를 밀거나 막으면 안 된다.
     /// 레이어로 거르면 시체가 바닥까지 통과해 버리므로, 플레이어 캡슐하고만 충돌을 끈다.
-    /// (시체는 1초만 살다 사라지니 그 사이에 들어오는 플레이어는 신경 쓰지 않아도 된다)
     /// </summary>
     private void IgnorePlayers()
     {
@@ -100,5 +101,6 @@ public class RagdollCorpse : MonoBehaviour
 
         float t = vanishDuration > 0f ? Mathf.Clamp01(elapsed / vanishDuration) : 1f;
         transform.localScale = startScale * (1f - t);
+        if (t >= 1f) Destroy(gameObject);
     }
 }
