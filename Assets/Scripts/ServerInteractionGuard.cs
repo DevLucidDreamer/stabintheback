@@ -43,6 +43,20 @@ public static class ServerInteractionGuard
     public static bool IsFinite(Vector3 value)
         => float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
 
+    public static bool CanReach(NetworkConnectionToClient sender, Component target)
+    {
+        if (target == null || !IsNear(sender, target.transform.position)) return false;
+        Vector3 origin = sender.identity.transform.position + Vector3.up * 1.4f;
+        Vector3 delta = target.transform.position - origin;
+        foreach (var hit in Physics.RaycastAll(origin, delta.normalized, delta.magnitude,
+                     ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (hit.transform.IsChildOf(sender.identity.transform) || hit.transform.IsChildOf(target.transform)) continue;
+            return false;
+        }
+        return true;
+    }
+
     /// <summary>
     /// Pressure plates use the latest replicated transform. With autoSyncTransforms
     /// disabled, a remote CharacterController's physics bounds can still describe

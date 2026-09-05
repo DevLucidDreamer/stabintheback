@@ -19,20 +19,16 @@ public class LobbyManager : NetworkBehaviour
 
     [Header("씬 전환")]
     [Tooltip("인원이 모이면 이동할 게임 씬 이름(Build Settings에 포함되어야 함)")]
-    [SerializeField] private string firstStageScene = "Stage3_CursedFortress";
+    [SerializeField] private string firstStageScene = "Stage1_StoneTemple";
 
     private static readonly string[] StageScenes =
     {
-        "Stage3_CursedFortress",
-        "Stage4_MagicSwordEscape",
-        "Stage2_Campground"
+        "Stage1_StoneTemple"
     };
 
     private static readonly string[] StageNames =
     {
-        "저주받은 성채",
-        "지하 격리 연구동 B-13",
-        "캠핑장 바베큐"
+        "신전 → 폐광 → 제단 · 4인 협동"
     };
 
     [Tooltip("출발 조건이 갖춰진 뒤 실제 전환까지의 카운트다운(초)")]
@@ -111,6 +107,7 @@ public class LobbyManager : NetworkBehaviour
         serverChangingScene = false;
         countdownEndsAt = -1d;
         targetPlayers = Mathf.Clamp(targetPlayers, minPlayers, maxPlayers);
+        minPlayers = maxPlayers = targetPlayers = 4;
         ApplyMaxConnections();
     }
 
@@ -132,7 +129,7 @@ public class LobbyManager : NetworkBehaviour
             && NetworkManager.singleton != null)
         {
             serverChangingScene = true;
-            NetworkManager.singleton.ServerChangeScene(SelectedStageScene());
+            WeaponJourney.ChangeScene(SelectedStageScene());
         }
     }
 

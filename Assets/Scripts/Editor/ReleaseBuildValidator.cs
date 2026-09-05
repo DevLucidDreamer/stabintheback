@@ -21,9 +21,9 @@ public static class ReleaseBuildValidator
     {
         "Assets/Scenes/MainTitle.unity",
         "Assets/Scenes/Lobby.unity",
-        "Assets/Scenes/Stage3_CursedFortress.unity",
-        "Assets/Scenes/Stage4_MagicSwordEscape.unity",
-        "Assets/Scenes/Stage2_Campground.unity"
+        "Assets/Scenes/Stage1_StoneTemple.unity",
+        "Assets/Scenes/Stage2_BrokenBridge.unity",
+        "Assets/Scenes/Stage3_UndergroundAltar.unity"
     };
 
     private const string PlayerPrefabPath = "Assets/Prefabs/NetworkPlayer.prefab";
@@ -112,7 +112,7 @@ public static class ReleaseBuildValidator
             .Select(scene => scene.path)
             .ToArray();
         if (!enabledScenes.SequenceEqual(ExpectedScenes))
-            problems.Add("Build Settings 씬 순서가 MainTitle → Lobby → Stage3 → Stage4 → Stage2가 아닙니다.");
+            problems.Add("Build Settings 씬 순서가 MainTitle → Lobby → Stage1_StoneTemple → Stage2_BrokenBridge → Stage3_UndergroundAltar이 아닙니다.");
 
         foreach (string path in ExpectedScenes)
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(path) == null)

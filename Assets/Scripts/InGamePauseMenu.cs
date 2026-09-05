@@ -310,6 +310,17 @@ public sealed class InGamePauseMenu : MonoBehaviour
             sfxValue.text = Mathf.RoundToInt(value * 100f) + "%";
         });
         sfxValue.text = Mathf.RoundToInt(GameOptions.SfxVolume * 100f) + "%";
+        Label(page, "MusicLabel", "배경음악", 23f, Ink, TextAlignmentOptions.Left,
+            new Vector2(190f, 36f), new Vector2(-245f, -212f));
+        Slider music = MakeSlider(page, "MusicVolume", new Vector2(360f, 32f), new Vector2(55f, -212f));
+        var musicValue = Label(page, "MusicValue", "", 22f, Ink, TextAlignmentOptions.Right,
+            new Vector2(90f, 36f), new Vector2(310f, -212f));
+        music.SetValueWithoutNotify(GameOptions.MusicVolume);
+        musicValue.text = Mathf.RoundToInt(GameOptions.MusicVolume * 100f) + "%";
+        music.onValueChanged.AddListener(value => {
+            GameOptions.SetMusicVolume(value);
+            musicValue.text = Mathf.RoundToInt(value * 100f) + "%";
+        });
     }
 
     private void BuildControls(RectTransform page)
@@ -318,7 +329,8 @@ public sealed class InGamePauseMenu : MonoBehaviour
             "<color=#59C7A8><b>이동</b></color>\n" +
             "WASD / 방향키  이동     Shift  달리기     Space  점프\n\n" +
             "<color=#59C7A8><b>상호작용</b></color>\n" +
-            "좌클릭  줍기·사용·공격     우클릭  무기를 든 채 사용\n" +
+            "좌클릭  줍기·사용·공격     우클릭  추가 무기 줍기·사용\n" +
+            "마우스 휠  보유 무기 전환 (최대 3개)\n" +
             "G  들고 있는 무기 내려놓기     E  준비물 목록\n\n" +
             "<color=#59C7A8><b>음성 및 메뉴</b></color>\n" +
             "V  눌러 말하기     M  마이크 음소거\n" +

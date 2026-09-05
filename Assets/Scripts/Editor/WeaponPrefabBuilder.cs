@@ -105,6 +105,17 @@ public static class WeaponPrefabBuilder
 
     // ---------------------------------------------------------------- 한 자루 만들기
 
+    public static void BuildChalice()
+    {
+        EnsureFolder(MeshFolder);
+        EnsureFolder(PrefabFolder);
+        string json = File.ReadAllText("Assets/Models/weapons/Converted/ChaliceBottle.mesh.json");
+        if (!BuildOne(new Def("ChaliceBottle", "성배병", 0.62f,
+            new Vector3(0.5f, 0.8f, 0.5f), new Vector3(0f, 0f, -20f), 1.5f, 0.9f), json))
+            throw new InvalidOperationException("성배병 메시 변환 실패");
+        AssetDatabase.SaveAssets();
+    }
+
     private static bool BuildOne(Def def, string json)
     {
         BlendDoc doc = JsonUtility.FromJson<BlendDoc>(json);
@@ -129,6 +140,7 @@ public static class WeaponPrefabBuilder
         {
             var weapon = root.AddComponent<Weapon>();
             weapon.SetDisplayName(def.Display);
+            if (def.File == "ChaliceBottle") weapon.campaignKey = "chalice";
             weapon.holdPosition = Vector3.zero;
             weapon.holdEuler = def.HoldEuler;
             weapon.swingReach = def.Reach;
@@ -195,7 +207,8 @@ public static class WeaponPrefabBuilder
                 (part.vertices[i * 3 + 2] - gripLocal.z) * scale);
         }
 
-        var mesh = new Mesh { name = index == 0 ? file : $"{file}_{index}" };
+        var mesh = new Mesh { name = index == 0 ? file : $"{file}_{index}",
+            indexFormat = vertexCount > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16 };
         mesh.SetVertices(verts);
 
         if (part.normals != null && part.normals.Length == part.vertices.Length)

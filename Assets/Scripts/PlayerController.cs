@@ -14,6 +14,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float moveSpeed = 6f;
     [Tooltip("Shift를 누르고 있을 때 달리기 속도 (m/s)")]
     [SerializeField] private float sprintSpeed = 10f;
+    [SerializeField] private SprintStamina stamina = new SprintStamina();
+    public float Stamina => stamina.Value;
     [Tooltip("점프 높이 (m)")]
     [SerializeField] private float jumpHeight = 1.2f;
     [Tooltip("중력 가속도 (m/s^2). 아래로 향하므로 음수")]
@@ -43,6 +45,14 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+        // CharacterController owns movement and gravity. A dynamic root Rigidbody
+        // otherwise integrates a second gravity path on hosts AND remote replicas,
+        // pulling players through floors and repeatedly releasing pressure plates.
+        if (TryGetComponent(out Rigidbody body))
+        {
+            body.isKinematic = true;
+            body.useGravity = false;
+        }
 
         // 카메라가 지정되지 않았으면 자식에서 찾는다.
         if (cameraTransform == null)
@@ -62,7 +72,10 @@ public class PlayerController : MonoBehaviour
     private void OnDisable()
     {
         if (inputEnabled)
+        {
             LockCursor(false);
+            GameHud.Current?.SetStamina(stamina.Value, stamina.Exhausted, false);
+        }
     }
 
     private void Update()
@@ -78,9 +91,7 @@ public class PlayerController : MonoBehaviour
             LookAround();
         }
 
-        // 창이 열려 있어도 Move는 계속 부른다.
-        // CharacterController는 Move를 부르지 않으면 접지 판정도 멈춰 버려서,
-        // 조작을 통째로 끄면 캐릭터가 바닥을 뚫고 가라앉는다.
+        // UI가 열려 있어도 이동 컨트롤러의 중력과 접지 갱신은 유지한다.
         Move();
     }
 
@@ -109,7 +120,10 @@ public class PlayerController : MonoBehaviour
         Vector2 input = ReadMoveInput();
         Vector3 move = transform.right * input.x + transform.forward * input.y;
 
-        bool sprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+        bool sprinting = stamina.Tick(Time.deltaTime,
+            !inputPaused && Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed,
+            input.sqrMagnitude > .01f);
+        GameHud.Ensure().SetStamina(stamina.Value, stamina.Exhausted, true);
         float speed = sprinting ? sprintSpeed : moveSpeed;
 
         if (controller.isGrounded)
@@ -180,7 +194,7 @@ public class PlayerController : MonoBehaviour
             LockCursor(enabled && !inputPaused);
     }
 
-    public void ResetMotionAfterRespawn() => verticalVelocity = 0f;
+    public void ResetMotionAfterRespawn() { verticalVelocity = 0f; stamina.Reset(); }
 
     /// <summary>
     /// 메뉴/옵션 창이 열려 있는 동안 조작만 멈춘다.

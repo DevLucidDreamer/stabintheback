@@ -15,6 +15,7 @@ public static class GameOptions
 
     public static float MasterVolume { get; private set; } = 1f;
     public static float SfxVolume { get; private set; } = 1f;
+    public static float MusicVolume { get; private set; } = 0.65f;
     public static bool PushToTalk { get; private set; } = true;
 
     /// <summary>현재 지원 언어. 전체 현지화가 완료되기 전까지 한국어만 노출한다.</summary>
@@ -28,6 +29,7 @@ public static class GameOptions
     {
         MasterVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(VolumeKey, 1f));
         SfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(SfxVolumeKey, 1f));
+        MusicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat("opt_music_volume", 0.65f));
         PushToTalk = PlayerPrefs.GetInt(VoiceModeKey, 1) != 0;
         Language = Korean;
         Apply();
@@ -53,6 +55,13 @@ public static class GameOptions
     {
         PushToTalk = enabled;
         PlayerPrefs.SetInt(VoiceModeKey, enabled ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
+    public static void SetMusicVolume(float value)
+    {
+        MusicVolume = Mathf.Clamp01(value);
+        PlayerPrefs.SetFloat("opt_music_volume", MusicVolume);
         PlayerPrefs.Save();
     }
 

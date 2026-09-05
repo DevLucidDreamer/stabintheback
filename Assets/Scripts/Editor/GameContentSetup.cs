@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 게임 전체(폰트 · 무기 · 플레이어 · 타이틀 · 캠핑장 · 대기실)를 올바른 순서로 한 번에 만든다.
+/// 폰트 · 무기 · 플레이어 · 타이틀 · 돌 신전을 순서대로 만든다. 기존 대기실은 유지한다.
 ///
 /// 순서가 중요하다.
 ///  1) TMP 폰트가 기본으로 잡혀 있어야 런타임에 만드는 HUD 글자에 한글이 나온다.
@@ -11,8 +11,7 @@ using UnityEngine;
 ///  3) 플레이어 애니메이션 셋업이 RemoteAvatar를 goshi로 바꾼 뒤라야
 ///     래그돌 빌더가 같은 뼈대에서 시체를 만들 수 있다.
 ///  4) 씬을 갈아엎는 작업은 프리팹이 다 끝난 뒤에 한다.
-///  5) 대기실을 <b>마지막</b>에 만든다 — 대기실 빌더가 타이틀 연결과
-///     Build Settings 순서(타이틀 → 대기실 → 성채 → 마검 성소 → 캠핑장)를 정리하기 때문이다.
+///  5) 돌 신전 빌더가 Build Settings를 타이틀 → 기존 대기실 → 돌 신전 순서로 정리한다.
 ///
 /// 메뉴: Tools > Setup > Build Everything
 /// </summary>
@@ -29,10 +28,8 @@ public static class GameContentSetup
             "3. 플레이어 애니메이션 (goshi)\n" +
             "4. 래그돌 시체 프리팹\n" +
             "5. 타이틀 화면\n" +
-            "6. 캠핑장 씬 (Stage2_Campground)\n" +
-            "7. 협동 탈출 성채 (Stage3_CursedFortress)\n" +
-            "8. 지하 격리 연구동 B-13 (Stage4_MagicSwordEscape)\n" +
-            "9. 대기실 씬 (Lobby) + Build Settings 정리\n\n" +
+            "6. 돌 신전·폐광 돌다리·지하 제단 씬\n" +
+            "7. 기존 대기실 유지 + Build Settings 정리\n\n" +
             "씬을 새로 만들기 때문에 현재 씬에서 손으로 고쳐 둔 것은 사라집니다.\n" +
             "계속할까요?",
             "실행", "취소");
@@ -48,13 +45,11 @@ public static class GameContentSetup
         RagdollBuilder.BuildRagdoll();
 
         TitleSceneSetup.SetupMainTitle();
-        Stage2Builder.BuildStage2();
-        Stage3FortressBuilder.BuildStage3();
-        Stage4MagicEscapeBuilder.BuildStage4();
-        LobbyBuilder.BuildLobby();
+        StoneTempleBuilder.Build();
+        ExpeditionBuilder.Build();
 
         Debug.Log("[Setup] 전체 생성 완료.\n" +
-                  "타이틀 → 대기실 → 성채/B-13 연구동/캠핑장 순서로 Build Settings가 정리되었습니다.\n" +
+                  "타이틀 → 기존 대기실 → 돌 신전 → 폐광 돌다리 → 지하 제단 순서로 Build Settings가 정리되었습니다.\n" +
                   "MainTitle 씬을 열고 플레이하면 처음부터 확인할 수 있습니다.");
     }
 

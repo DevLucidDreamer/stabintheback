@@ -38,7 +38,7 @@ public static class LobbyBuilder
     private const string LobbySceneName = "Lobby";
 
     /// <summary>대기실에서 인원이 다 모이면 출발할 게임 씬.</summary>
-    private const string FirstStageScene = "Stage3_CursedFortress";
+    private const string FirstStageScene = "Stage1_StoneTemple";
 
     /// <summary>방 정원의 기본값. 호스트가 대기실에서 Tab을 눌러 바꿀 수 있다.</summary>
     private const int DefaultTargetPlayers = 4;
@@ -787,9 +787,7 @@ public static class LobbyBuilder
         var order = new List<string>();
         if (System.IO.File.Exists(TitlePath)) order.Add(TitlePath);
         order.Add(LobbyPath);
-        if (System.IO.File.Exists(Stage3Path)) order.Add(Stage3Path);
-        if (System.IO.File.Exists(Stage4Path)) order.Add(Stage4Path);
-        if (System.IO.File.Exists(Stage2Path)) order.Add(Stage2Path);
+        if (System.IO.File.Exists(StoneTempleBuilder.ScenePath)) order.Add(StoneTempleBuilder.ScenePath);
 
         EditorBuildSettings.scenes = order
             .Select(path => new EditorBuildSettingsScene(path, true))

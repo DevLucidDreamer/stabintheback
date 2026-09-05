@@ -54,6 +54,12 @@ public class GameHud : MonoBehaviour
     private TextMeshProUGUI bottomLabel;
     private TextMeshProUGUI toastLabel;
     private TextMeshProUGUI bannerLabel;
+    private TextMeshProUGUI deathLabel;
+    private bool deathScreen;
+    private RectTransform staminaBar;
+    private Image staminaFill;
+    private TextMeshProUGUI weaponLabel;
+    private float weaponLabelUntil;
 
     private RectTransform goalPanel;
     private RectTransform topLeftPanel;
@@ -91,6 +97,7 @@ public class GameHud : MonoBehaviour
 
         if (bannerLabel.gameObject.activeSelf && Time.time >= bannerUntil)
             bannerLabel.gameObject.SetActive(false);
+        if (weaponLabel != null && Time.time >= weaponLabelUntil) weaponLabel.gameObject.SetActive(false);
     }
 
     // ---- 바깥에서 쓰는 창구 -------------------------------------------------
@@ -135,6 +142,7 @@ public class GameHud : MonoBehaviour
     /// <summary>화면 가운데에 잠깐 크게 띄우는 알림(피격, 획득 등).</summary>
     public void ShowToast(string text, float seconds = 1.8f, Color? color = null)
     {
+        if (deathScreen) return;
         if (string.IsNullOrEmpty(text))
             return;
 
@@ -147,6 +155,7 @@ public class GameHud : MonoBehaviour
     /// <summary>페이즈 전환처럼 판을 가르는 큰 알림.</summary>
     public void ShowBanner(string text, float seconds = 3.5f, Color? color = null)
     {
+        if (deathScreen) return;
         if (string.IsNullOrEmpty(text))
             return;
 
@@ -159,6 +168,7 @@ public class GameHud : MonoBehaviour
     /// <summary>씬을 옮길 때처럼 화면을 한 번에 비운다.</summary>
     public void Clear()
     {
+        SetDeathScreen(false);
         SetPrompt(string.Empty);
         SetGoal(string.Empty);
         SetTopLeft(string.Empty);
@@ -169,6 +179,21 @@ public class GameHud : MonoBehaviour
     }
 
     // ---- 캔버스 만들기 -----------------------------------------------------
+
+    public void SetDeathScreen(bool visible)
+    {
+        deathScreen = visible;
+        if (deathLabel != null) deathLabel.gameObject.SetActive(visible);
+        if (visible)
+        {
+            if (staminaBar != null) staminaBar.gameObject.SetActive(false);
+            if (weaponLabel != null) weaponLabel.gameObject.SetActive(false);
+            toastLabel.gameObject.SetActive(false);
+            bannerLabel.gameObject.SetActive(false);
+            SetCrosshair(false);
+            SetPrompt(string.Empty);
+        }
+    }
 
     private void Build()
     {
@@ -193,6 +218,15 @@ public class GameHud : MonoBehaviour
         var root = (RectTransform)canvasGo.transform;
 
         BuildCrosshair(root);
+        staminaBar = MakePanel(root, "StaminaBar", new Vector2(.5f, 0), new Vector2(0, 28), new Vector2(320, 8));
+        var fill = new GameObject("StaminaFill", typeof(RectTransform)); fill.transform.SetParent(staminaBar, false);
+        staminaFill = fill.AddComponent<Image>(); staminaFill.raycastTarget = false;
+        staminaFill.rectTransform.anchorMin = Vector2.zero; staminaFill.rectTransform.anchorMax = Vector2.one;
+        staminaFill.rectTransform.offsetMin = staminaFill.rectTransform.offsetMax = Vector2.zero;
+        staminaBar.gameObject.SetActive(false);
+        weaponLabel = MakeLabel(root, "EquippedWeapon", 24f, Ink, TextAlignmentOptions.Center);
+        Anchor(weaponLabel.rectTransform, new Vector2(.5f, 0), new Vector2(0, 65), new Vector2(440, 40));
+        weaponLabel.gameObject.SetActive(false);
 
         // 위 가운데: 현재 목표
         goalPanel = MakePanel(root, "GoalPanel", new Vector2(0.5f, 1f), new Vector2(0f, -58f), new Vector2(760f, 64f));
@@ -224,10 +258,29 @@ public class GameHud : MonoBehaviour
         Anchor(bannerLabel.rectTransform, new Vector2(0.5f, 0.72f), Vector2.zero, new Vector2(1600f, 130f));
         bannerLabel.gameObject.SetActive(false);
 
+        deathLabel = MakeLabel(root, "Wasted", 132f, new Color(0.85f, 0.035f, 0.035f), TextAlignmentOptions.Center);
+        deathLabel.text = "WASTED";
+        deathLabel.fontStyle = FontStyles.Bold;
+        deathLabel.characterSpacing = 8f;
+        Anchor(deathLabel.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1600f, 210f));
+        deathLabel.gameObject.SetActive(false);
+
         Clear();
     }
 
     /// <summary>가운데 조준점. 밝은 배경에서도 보이도록 어두운 테두리를 깐다.</summary>
+    public void SetStamina(float value, bool exhausted, bool visible)
+    {
+        if (staminaBar == null) return;
+        staminaBar.gameObject.SetActive(visible && !deathScreen);
+        staminaFill.rectTransform.anchorMax = new Vector2(Mathf.Clamp01(value), 1f);
+        staminaFill.color = exhausted ? new Color(.72f, .38f, .28f) : new Color(.75f, .82f, .81f);
+    }
+    public void ShowWeaponName(string name)
+    {
+        if (weaponLabel == null || deathScreen) return;
+        weaponLabel.text = name; weaponLabel.gameObject.SetActive(true); weaponLabelUntil = Time.time + 1.3f;
+    }
     private void BuildCrosshair(RectTransform root)
     {
         var go = new GameObject("Crosshair", typeof(RectTransform));

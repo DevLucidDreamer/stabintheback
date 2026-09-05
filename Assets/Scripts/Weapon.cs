@@ -39,17 +39,26 @@ public class Weapon : Interactable
     [Header("네트워크")]
     [Tooltip("멀티플레이 동기화용 고유 ID. Phase 4 셋업 메뉴가 부여한다")]
     [SerializeField] private int weaponId = -1;
+    public string campaignKey;
+    public bool startsAvailable = true;
 
     public int WeaponId => weaponId;
     public void SetWeaponId(int id) => weaponId = id;
 
-    public override string GetPrompt() => DisplayName + " 줍기";
+    public override string GetPrompt()
+    {
+        var player = Mirror.NetworkClient.localPlayer;
+        if (player != null && WeaponNetworkManager.Instance != null &&
+            WeaponNetworkManager.Instance.Inventory(player.netId).Length >= WeaponNetworkManager.Capacity) return "소지 한도 3개";
+        return DisplayName + " 줍기";
+    }
 
     public override void Interact(PlayerInteraction player) => player.PickUp(this);
 
     /// <summary>손 소켓에 붙인다. 콜라이더/물리를 끄고 소지 포즈를 적용.</summary>
     public void AttachTo(Transform socket)
     {
+        gameObject.SetActive(true);
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
             Destroy(rb);
@@ -69,12 +78,13 @@ public class Weapon : Interactable
     /// 그렇지 않으면(멀티플레이) 물리를 동기화하지 않으므로, 드롭 위치 아래로
     /// 레이캐스트해 즉시 바닥 위에 얹어 공중에 뜨지 않게 한다.
     /// </summary>
-    public void DetachTo(Vector3 worldPos, Quaternion worldRot, bool addPhysics)
+    public void DetachTo(Vector3 worldPos, Quaternion worldRot, bool addPhysics, bool snapToGround = true)
     {
+        gameObject.SetActive(true);
         transform.SetParent(null, true);
 
         // 물리 없이 놓는 경우 바닥에 스냅. (콜라이더는 아직 꺼져 있어 자기 자신에 걸리지 않는다)
-        if (!addPhysics &&
+        if (!addPhysics && snapToGround &&
             Physics.Raycast(worldPos + Vector3.up * 0.3f, Vector3.down, out RaycastHit hit, 6f, ~0, QueryTriggerInteraction.Ignore))
         {
             worldPos = hit.point + Vector3.up * (groundClearance + groundOffset);

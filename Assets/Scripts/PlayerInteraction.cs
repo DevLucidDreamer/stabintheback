@@ -94,8 +94,11 @@ public class PlayerInteraction : MonoBehaviour
         }
 
         // 무기를 들고 있어도 우클릭으로는 서랍/문을 열 수 있다.
-        if (mouse.rightButton.wasPressedThisFrame && target != null && !(target is Weapon))
+        if (mouse.rightButton.wasPressedThisFrame && target != null)
             target.Interact(this);
+
+        float wheel = mouse.scroll.ReadValue().y;
+        if (Mathf.Abs(wheel) > .01f) WeaponNetworkManager.Instance?.RequestCycle(wheel > 0 ? -1 : 1);
 
         if (kb != null && kb.gKey.wasPressedThisFrame)
             Drop();
@@ -190,15 +193,28 @@ public class PlayerInteraction : MonoBehaviour
             return;
         weapon.AttachTo(holdSocket);
         heldWeapon = weapon;
+        swingTimer = -1f; holdSocket.localRotation = Quaternion.identity;
+        if (IsLocalView()) GameHud.Ensure().ShowWeaponName(weapon.DisplayName);
         GameAudio.PlayAt("pickup", transform.position + Vector3.up, 0.28f,
             UnityEngine.Random.Range(0.96f, 1.04f), 1.2f, 10f);
     }
 
-    public void DetachWeaponVisual(Weapon weapon, Vector3 worldPos, Quaternion worldRot)
+    public void StoreWeaponVisual(Weapon weapon)
+    {
+        if (heldWeapon == weapon)
+        {
+            heldWeapon = null; swingTimer = -1f;
+            if (holdSocket != null) holdSocket.localRotation = Quaternion.identity;
+        }
+        if (holdSocket != null) weapon.transform.SetParent(holdSocket, false);
+        weapon.gameObject.SetActive(false);
+    }
+
+    public void DetachWeaponVisual(Weapon weapon, Vector3 worldPos, Quaternion worldRot, bool snapToGround = true)
     {
         if (weapon == null)
             return;
-        weapon.DetachTo(worldPos, worldRot, false);
+        weapon.DetachTo(worldPos, worldRot, false, snapToGround);
         if (heldWeapon == weapon)
         {
             heldWeapon = null;
@@ -274,6 +290,10 @@ public class PlayerInteraction : MonoBehaviour
             if (col.isTrigger || col.transform.IsChildOf(transform))
                 continue; // 자기 몸/자기 무기 제외
 
+            // Player impacts are emitted once by the server after a confirmed hit.
+            if (col.GetComponentInParent<PlayerHealth>() != null)
+                continue;
+
             hitSomething = true;
 
             Rigidbody rb = col.attachedRigidbody;
@@ -328,7 +348,7 @@ public class PlayerInteraction : MonoBehaviour
             return target != null ? "[좌클릭] " + target.GetPrompt() : string.Empty;
 
         // 무기를 들고 있으면 좌클릭은 스윙에 묶인다. 조작은 우클릭으로 안내한다.
-        return target != null && !(target is Weapon)
+        return target != null
             ? "[우클릭] " + target.GetPrompt()
             : string.Empty;
     }

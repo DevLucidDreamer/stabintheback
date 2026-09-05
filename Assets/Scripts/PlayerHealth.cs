@@ -77,6 +77,10 @@ public class PlayerHealth : NetworkBehaviour
     {
         Transform spawn = NetworkManager.singleton != null ? NetworkManager.singleton.GetStartPosition() : null;
         Vector3 position = spawn != null ? spawn.position : life.position;
+        if (StoneTempleManager.Instance != null)
+            position = StoneTempleManager.Instance.RespawnPoint(netId);
+        else if (ExpeditionManager.Instance != null)
+            position = ExpeditionManager.Instance.RespawnPoint(netId);
         Quaternion rotation = spawn != null ? spawn.rotation : life.rotation;
         Teleport(position, rotation);
         life = new LifeState
@@ -108,15 +112,16 @@ public class PlayerHealth : NetworkBehaviour
                     corpse = ragdoll.SpawnCorpse(life.position, life.rotation, life.blowDirection,
                         Mathf.Max(0.1f, (float)(life.endsAt - NetworkTime.time)) + 0.2f);
             }
-            if (isLocalPlayer && visuals.BeginDeathView(corpse, life.position, life.rotation))
-                GameHud.Ensure().ShowToast("당했다! 잠시 후 리스폰", 2f, new Color(1f, 0.4f, 0.35f));
+            if (isLocalPlayer)
+            {
+                visuals.BeginDeathView(corpse, life.position, life.rotation);
+                GameHud.Ensure().SetDeathScreen(true);
+            }
         }
         else
         {
-            bool wasViewingDeath = visuals.EndDeathView();
-            if (wasViewingDeath && isLocalPlayer)
-                GameHud.Ensure().ShowToast($"리스폰 보호 중 · {ProtectionRemaining:0.0}초", ProtectionRemaining,
-                    new Color(0.55f, 0.9f, 1f));
+            visuals.EndDeathView();
+            if (isLocalPlayer) GameHud.Ensure().SetDeathScreen(false);
         }
         GetComponent<NetworkPlayerSetup>()?.RefreshLifeState();
     }

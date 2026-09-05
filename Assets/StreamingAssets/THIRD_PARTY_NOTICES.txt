@@ -77,3 +77,29 @@ Fire Crackling by AntumDeluge
 Source: https://opengameart.org/content/fire-crackling
 Permanent page: https://opengameart.org/node/16327
 File used: fire-1.wav. The local filename was changed for in-game use.
+
+4. Stone Temple audio (CC0 1.0)
+--------------------------------
+Kenney - Impact Sounds
+Source: https://kenney.nl/assets/impact-sounds
+License: CC0 1.0 https://creativecommons.org/publicdomain/zero/1.0/
+impactPunch_heavy_000.ogg -> player_impact_01.ogg
+impactPunch_heavy_001.ogg -> player_impact_02.ogg
+impactSoft_heavy_000.ogg -> player_impact_body.ogg
+Original license: Licenses/Kenney_Impact_CC0.txt
+
+FazeDevWater - Dungeon Themes
+Source: https://opengameart.org/content/dungeon-themes
+License: CC0 1.0 https://creativecommons.org/publicdomain/zero/1.0/
+dungeonmystic_1.ogg -> Audio/Music/temple_mystic.ogg
+dungeon_11.ogg -> Audio/Music/lobby_dungeon.ogg
+Downloaded 2026-09-05. Music files are unmodified; playback volume and fades are applied at runtime.
+
+5. Stone Temple textures - ambientCG (CC0 1.0)
+--------------------------------
+Bricks089: https://ambientcg.com/view?id=Bricks089
+PavingStones136: https://ambientcg.com/view?id=PavingStones136
+License: https://docs.ambientcg.com/license/
+CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/
+2K JPG Color, NormalGL and AmbientOcclusion maps, downloaded 2026-09-05.
+Files are unmodified and renamed under Assets/Textures/Temple.
