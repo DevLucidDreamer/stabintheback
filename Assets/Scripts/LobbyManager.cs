@@ -31,7 +31,7 @@ public class LobbyManager : NetworkBehaviour
     private static readonly string[] StageNames =
     {
         "저주받은 성채",
-        "마검 탈출 성소",
+        "지하 격리 연구동 B-13",
         "캠핑장 바베큐"
     };
 

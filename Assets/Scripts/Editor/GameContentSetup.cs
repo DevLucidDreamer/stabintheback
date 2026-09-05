@@ -31,7 +31,7 @@ public static class GameContentSetup
             "5. 타이틀 화면\n" +
             "6. 캠핑장 씬 (Stage2_Campground)\n" +
             "7. 협동 탈출 성채 (Stage3_CursedFortress)\n" +
-            "8. 마검 탈출 성소 (Stage4_MagicSwordEscape)\n" +
+            "8. 지하 격리 연구동 B-13 (Stage4_MagicSwordEscape)\n" +
             "9. 대기실 씬 (Lobby) + Build Settings 정리\n\n" +
             "씬을 새로 만들기 때문에 현재 씬에서 손으로 고쳐 둔 것은 사라집니다.\n" +
             "계속할까요?",
@@ -54,7 +54,7 @@ public static class GameContentSetup
         LobbyBuilder.BuildLobby();
 
         Debug.Log("[Setup] 전체 생성 완료.\n" +
-                  "타이틀 → 대기실 → 성채/마검 성소/캠핑장 순서로 Build Settings가 정리되었습니다.\n" +
+                  "타이틀 → 대기실 → 성채/B-13 연구동/캠핑장 순서로 Build Settings가 정리되었습니다.\n" +
                   "MainTitle 씬을 열고 플레이하면 처음부터 확인할 수 있습니다.");
     }
 

@@ -60,7 +60,7 @@ public static class LobbyBuilder
     private static Material matWood, matWoodDark, matMetal, matDark;
     private static Material matFlame, matEmber, matGlass;
     private static Material matLeaf, matLeafDark, matLeafLight;
-    private static Material matAccent, matTent, matStraw;
+    private static Material matAccent, matStraw;
 
     [MenuItem("Tools/Lobby/Build Lobby")]
     public static void BuildLobby()
@@ -95,7 +95,6 @@ public static class LobbyBuilder
         PracticeArea(root);
         Campfire(root, CampfirePos);
         Camp(root);
-        Signs(root);
 
         SpawnPoints();
 
@@ -448,8 +447,7 @@ public static class LobbyBuilder
 
     private static void Gate(Transform p)
     {
-        // 180도 돌려 세운다. 게이트 자체는 좌우 대칭이라 모양은 그대로지만,
-        // 현수막과 글자가 붙는 +Z 면이 광장(남쪽)을 보게 되어 들어오면서 읽힌다.
+        // 광장 쪽을 향한 출발 게이트.
         Transform g = Group(p, "StartGate", GatePos, 180f);
 
         Box(g, "BaseL", new Vector3(-2.8f, 0.16f, 0f), new Vector3(0.9f, 0.32f, 0.9f), matStone);
@@ -457,11 +455,6 @@ public static class LobbyBuilder
         Box(g, "PostL", new Vector3(-2.8f, 2.2f, 0f), new Vector3(0.34f, 4.4f, 0.34f), matWood);
         Box(g, "PostR", new Vector3(2.8f, 2.2f, 0f), new Vector3(0.34f, 4.4f, 0.34f), matWood);
         Box(g, "Lintel", new Vector3(0f, 4.5f, 0f), new Vector3(6.4f, 0.36f, 0.42f), matWoodDark);
-        Box(g, "Banner", new Vector3(0f, 3.8f, 0.06f), new Vector3(3.8f, 1f, 0.06f), matAccent);
-
-        BuilderText.World(g, "BannerText", new Vector3(0f, 3.8f, 0.11f), "출  발",
-            new Vector2(3.4f, 0.8f), new Color(1f, 0.96f, 0.88f));
-
         // 기둥 위 장식 등
         foreach (float x in new[] { -2.8f, 2.8f })
         {
@@ -591,8 +584,8 @@ public static class LobbyBuilder
     {
         Transform g = Group(p, "Camp", new Vector3(10f, 0f, -3f), 0f);
 
-        Tent(g, new Vector3(0f, 0f, 0f), -110f, matTent);
-        Tent(g, new Vector3(2.6f, 0f, 5.4f), -145f, matAccent);
+        Tent(g, new Vector3(0f, 0f, 0f), -110f, "Tent_Blue");
+        Tent(g, new Vector3(2.6f, 0f, 5.4f), -145f, "Tent_Red");
 
         // 짐 상자 몇 개
         Box(g, "Crate1", new Vector3(-1.8f, 0.3f, 2.6f), new Vector3(0.7f, 0.6f, 0.7f), matWood);
@@ -600,57 +593,65 @@ public static class LobbyBuilder
         Box(g, "Cooler", new Vector3(-0.4f, 0.28f, 3.6f), new Vector3(0.86f, 0.56f, 0.54f), matAccent);
     }
 
-    /// <summary>A형 텐트. 지붕 두 장이 마루에서 만나야 ∧ 모양이 된다.</summary>
-    private static void Tent(Transform p, Vector3 pos, float rotY, Material mat)
+    /// <summary>TENT.blend 모델과 충돌 영역이 연결된 캠프 프리팹을 배치한다.</summary>
+    private static Transform Tent(Transform parent, Vector3 pos, float rotY, string prefabName)
     {
-        Transform g = Group(p, "Tent", pos, rotY);
+        string path = $"Assets/Prefabs/Camp/{prefabName}.prefab";
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        if (prefab == null)
+            throw new MissingReferenceException("텐트 프리팹을 찾을 수 없습니다: " + path);
 
-        Box(g, "Floor", new Vector3(0f, 0.06f, 0f), new Vector3(2.3f, 0.12f, 3f), matDark);
-
-        GameObject l = Box(g, "SideL", new Vector3(-0.62f, 0.95f, 0f), new Vector3(0.08f, 2.2f, 3.1f), mat);
-        GameObject r = Box(g, "SideR", new Vector3(0.62f, 0.95f, 0f), new Vector3(0.08f, 2.2f, 3.1f), mat);
-        l.transform.localRotation = Quaternion.Euler(0f, 0f, -32f);
-        r.transform.localRotation = Quaternion.Euler(0f, 0f, 32f);
-
-        Box(g, "Back", new Vector3(0f, 0.85f, -1.52f), new Vector3(2.2f, 1.7f, 0.06f), mat);
-        Box(g, "Ridge", new Vector3(0f, 1.86f, 0f), new Vector3(0.07f, 0.07f, 3.3f), matWoodDark);
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        instance.name = "Tent";
+        instance.transform.localPosition = pos;
+        instance.transform.localRotation = Quaternion.Euler(0f, rotY, 0f);
+        instance.transform.localScale = Vector3.one;
+        return instance.transform;
     }
 
-    // ---------------------------------------------------------------- 안내 팻말
-
-    private static void Signs(Transform p)
+    /// <summary>다른 배치를 유지하며 열린 로비의 텐트와 표지판만 갱신한다.</summary>
+    [MenuItem("Tools/Lobby/Update Tents and Remove Signs (씬 유지)")]
+    public static void UpdateTentsAndRemoveSigns()
     {
-        Transform g = Group(p, "Signs", Vector3.zero, 0f);
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+        if (EditorApplication.isPlayingOrWillChangePlaymode || scene.path != LobbyPath)
+            throw new System.InvalidOperationException("플레이 모드를 종료하고 Lobby 씬을 열어 주세요.");
 
-        // 팻말은 rotY가 가리키는 쪽에서 읽힌다. 스폰(0, -13)에서 광장으로 걸어오는
-        // 사람이 읽어야 하므로 남쪽을 보게 세운다.
-        Sign(g, "ControlSign", new Vector3(-4.2f, 0f, -10.2f), 145f,
-            "WASD 이동 · Shift 달리기 · Space 점프\n좌클릭 사용/공격 · 우클릭 보조 · G 내려놓기");
+        Transform root = scene.GetRootGameObjects().First(go => go.name == "Lobby").transform;
+        Transform camp = root.Find("Camp");
+        Transform[] tents = camp.Cast<Transform>().Where(t => t.name == "Tent").ToArray();
+        // 변경 전에 두 프리팹이 모두 유효한지 확인한다.
+        foreach (string name in new[] { "Tent_Blue", "Tent_Red" })
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Prefabs/Camp/{name}.prefab");
+            if (prefab == null || prefab.GetComponentsInChildren<Renderer>(true).Length == 0)
+                throw new MissingReferenceException("텐트 모델이 임포트되지 않았습니다: " + name);
+        }
 
-        Sign(g, "MenuSign", new Vector3(0f, 0f, -11.8f), 180f,
-            "ESC 설정·조작방법 · E 준비물\nV 눌러 말하기 · M 음소거 · Tab 방 설정");
+        Undo.IncrementCurrentGroup();
+        int undoGroup = Undo.GetCurrentGroup();
+        Undo.SetCurrentGroupName("Update lobby tents and remove signs");
+        for (int i = 0; i < tents.Length; i++)
+        {
+            Transform old = tents[i];
+            Transform replacement = Tent(camp, old.localPosition, 0f, i % 2 == 0 ? "Tent_Blue" : "Tent_Red");
+            replacement.localRotation = old.localRotation;
+            replacement.localScale = old.localScale;
+            replacement.SetSiblingIndex(old.GetSiblingIndex());
+            Undo.RegisterCreatedObjectUndo(replacement.gameObject, "Replace lobby tent");
+            Undo.DestroyObjectImmediate(old.gameObject);
+        }
 
-        Sign(g, "AltarSign", new Vector3(4.6f, 0f, -4.6f), 210f,
-            "냉동참치 — 한 방이면 끝난다\n먼저 잡는 사람이 임자");
+        foreach (string path in new[] { "Signs", "StartGate/Banner", "StartGate/BannerText" })
+        {
+            Transform sign = root.Find(path);
+            if (sign != null) Undo.DestroyObjectImmediate(sign.gameObject);
+        }
 
-        Sign(g, "GateSign", new Vector3(5.2f, 0f, 9.4f), 205f,
-            "정원이 다 차면 출발\n발판 위에서 기다리자");
-
-        Sign(g, "PracticeSign", new Vector3(-5.6f, 0f, 5.2f), 115f,
-            "허수아비 연습장\n무기를 들고 휘둘러 보세요");
-    }
-
-    /// <summary>나무 팻말 + TMP 글자. rotY가 향하는 쪽(+Z)에서 읽힌다.</summary>
-    private static void Sign(Transform parent, string name, Vector3 pos, float rotY, string text)
-    {
-        Transform g = Group(parent, name, pos, rotY);
-        Box(g, "Post", new Vector3(0f, 0.7f, 0f), new Vector3(0.1f, 1.4f, 0.1f), matWoodDark);
-        Box(g, "Board", new Vector3(0f, 1.62f, 0f), new Vector3(3.2f, 0.95f, 0.08f), matWood);
-        Box(g, "BoardTrim", new Vector3(0f, 1.62f, -0.02f), new Vector3(3.34f, 1.06f, 0.06f), matWoodDark);
-
-        // 판보다 살짝 안쪽으로 잡아 글자가 테두리에 닿지 않게 한다.
-        BuilderText.World(g, "Text", new Vector3(0f, 1.62f, 0.055f), text,
-            new Vector2(2.9f, 0.76f), BuilderText.SignInk);
+        Undo.CollapseUndoOperations(undoGroup);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log($"[Lobby] 텐트 {tents.Length}동 교체 및 모든 로비 표지판 제거 완료.");
     }
 
     // ---------------------------------------------------------------- 스폰 / 네트워크
@@ -938,7 +939,6 @@ public static class LobbyBuilder
         matLeafLight = GetMat("Camp_LeafLight", new Color(0.36f, 0.58f, 0.26f));
 
         matAccent = GetMat("Camp_Accent", new Color(0.8f, 0.3f, 0.2f));
-        matTent = GetMat("Camp_Tent", new Color(0.2f, 0.45f, 0.6f));
         matStraw = GetMat("Lobby_Straw", new Color(0.82f, 0.72f, 0.38f));
 
     }

@@ -118,7 +118,7 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
             leverMask = 0;
             leverUsers[0] = leverUsers[1] = 0;
             leverDeadline = -1d;
-            RpcToast("레버의 공명이 끊겼다. 다시 신호를 맞춰라!", false);
+            RpcToast("차단기 동기화 시간 초과. 다시 신호를 맞춰라!", false);
         }
         else if (Phase == MagicEscapePhase.RallyEscape)
             ServerUpdateRally();
@@ -155,9 +155,9 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
         if ((switchMask & bit) != 0)
             return;
         switchMask |= bit;
-        RpcToast($"숨은 봉인 해제 {CountBits(switchMask)} / {hiddenSwitchCount}", true);
+        RpcToast($"보조 전력 복구 {CountBits(switchMask)} / {hiddenSwitchCount}", true);
         if (CountBits(switchMask) >= hiddenSwitchCount)
-            ServerAdvance(MagicEscapePhase.SplitCipher, "비밀 통로가 열렸다! 갈라진 기록을 합쳐라");
+            ServerAdvance(MagicEscapePhase.SplitCipher, "B-02 기밀문 개방! 양쪽 관찰 기록을 합쳐라");
     }
 
     // 분산 룬 ---------------------------------------------------------------
@@ -184,14 +184,14 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
         if (index == runeSequence[runeProgress])
         {
             runeProgress++;
-            RpcToast($"룬 해독 {runeProgress} / {runeSequence.Length}", true);
+            RpcToast($"접근 코드 입력 {runeProgress} / {runeSequence.Length}", true);
             if (runeProgress >= runeSequence.Length)
-                ServerAdvance(MagicEscapePhase.Counterweights, "예언이 풀렸다! 두 사람이 균형을 맞춰라");
+                ServerAdvance(MagicEscapePhase.Counterweights, "B-03 운송실 개방! 두 작업자가 중량판을 유지하라");
         }
         else
         {
             runeProgress = 0;
-            RpcToast("룬 순서가 틀렸다. 기록을 다시 맞춰라!", false);
+            RpcToast("접근 코드 불일치. 관찰 기록을 다시 확인하라!", false);
         }
     }
 
@@ -227,14 +227,14 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
             pressureLatchedMask |= pressureMask;
             pressureProgress = 0f;
             if ((pressureLatchedMask & fullMask) == fullMask)
-                ServerAdvance(MagicEscapePhase.TwinLevers, "균형문이 열렸다! 갈라진 길의 레버를 맞춰라");
+                ServerAdvance(MagicEscapePhase.TwinLevers, "B-04 제어실 개방! 분산 차단기를 맞춰라");
             return;
         }
         if ((pressureMask & fullMask) == fullMask && UniquePressurePlayers() >= pressurePlateCount)
         {
             pressureProgress += Time.deltaTime;
             if (pressureProgress >= pressureHoldSeconds)
-                ServerAdvance(MagicEscapePhase.TwinLevers, "균형문이 열렸다! 갈라진 길의 레버를 맞춰라");
+                ServerAdvance(MagicEscapePhase.TwinLevers, "B-04 제어실 개방! 분산 차단기를 맞춰라");
         }
         else
             pressureProgress = Mathf.Max(0f, pressureProgress - Time.deltaTime * 1.5f);
@@ -272,12 +272,12 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
         leverUsers[index] = playerId;
         bool solo = allowSoloAssist && ServerPlayerCount() <= 1;
         if (leverMask == 3 && (solo || leverUsers[0] != leverUsers[1]))
-            ServerAdvance(MagicEscapePhase.SealBreaking, "마검 보관실이 열렸다! 무기를 차지해 봉인을 깨라");
+            ServerAdvance(MagicEscapePhase.SealBreaking, "B-05 격리실 개방! 승인 도구를 차지해 격리핵을 파괴하라");
         else if (leverMask == 3)
         {
             leverMask = 1 << index;
             leverUsers[1 - index] = 0;
-            RpcToast("두 레버는 서로 다른 사람이 맡아야 한다!", false);
+            RpcToast("두 차단기는 서로 다른 작업자가 맡아야 한다!", false);
         }
     }
 
@@ -308,9 +308,9 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
         int bit = 1 << index;
         if ((brokenSealMask & bit) != 0) return;
         brokenSealMask |= bit;
-        RpcToast($"마검 봉인 파괴 {BrokenSealCount} / {sealCount}", true);
+        RpcToast($"격리핵 파괴 {BrokenSealCount} / {sealCount}", true);
         if (BrokenSealCount >= sealCount)
-            ServerAdvance(MagicEscapePhase.RallyEscape, "저주가 풀렸다! 마검을 경계하며 전원 탈출하라");
+            ServerAdvance(MagicEscapePhase.RallyEscape, "B-06 비상 승강기 개방! 전원이 탑승해야 한다");
     }
 
     // 전원 탈출 -------------------------------------------------------------
@@ -347,7 +347,7 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
             {
                 phase = (int)MagicEscapePhase.Victory;
                 victoryEndsAt = NetworkTime.time + returnDelay;
-                RpcPhaseEntered((int)MagicEscapePhase.Victory, "마검 탈출 성공! 마지막 보유자를 기억하라");
+                RpcPhaseEntered((int)MagicEscapePhase.Victory, "B-13 탈출 성공! 지상 이송을 시작한다");
             }
         }
         else rallyProgress = 0f;
@@ -474,13 +474,13 @@ public sealed class MagicEscapeGameManager : NetworkBehaviour
     {
         switch (Phase)
         {
-            case MagicEscapePhase.HiddenSwitches: return $"탐색: 방 곳곳의 숨은 봉인 스위치 {hiddenSwitchCount}개를 찾아라";
-            case MagicEscapePhase.SplitCipher: return "정보: 양쪽 기록을 합쳐 룬 순서를 입력하라";
-            case MagicEscapePhase.Counterweights: return "협동: 서로 다른 사람이 양쪽 발판을 유지하라";
-            case MagicEscapePhase.TwinLevers: return "타이밍: 갈라진 길의 두 레버를 맞춰라";
-            case MagicEscapePhase.SealBreaking: return "마검: 숨겨진 무기를 차지해 봉인핵을 파괴하라";
-            case MagicEscapePhase.RallyEscape: return "탈출: 한 명도 버리지 말고 출구에 모여라";
-            default: return "마검 탈출 성공";
+            case MagicEscapePhase.HiddenSwitches: return $"B-01 탐색: 숨은 보조 전력 단자 {hiddenSwitchCount}개를 복구하라";
+            case MagicEscapePhase.SplitCipher: return "B-02 정보: 양쪽 관찰 기록을 합쳐 접근 코드를 입력하라";
+            case MagicEscapePhase.Counterweights: return "B-03 협동: 서로 다른 작업자가 양쪽 중량판을 유지하라";
+            case MagicEscapePhase.TwinLevers: return "B-04 타이밍: 분리된 두 차단기를 9초 안에 작동하라";
+            case MagicEscapePhase.SealBreaking: return "B-05 마검: 승인 도구를 차지해 격리핵을 파괴하라";
+            case MagicEscapePhase.RallyEscape: return "B-06 탈출: 한 명도 버리지 말고 비상 승강기에 탑승하라";
+            default: return "지하 격리 연구동 B-13 탈출 성공";
         }
     }
 }
